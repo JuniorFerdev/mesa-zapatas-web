@@ -514,6 +514,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <div class="fld" id="ef_x"><div class="lab"><span id="eLabX">x (desde el centro, en dirección de B)</span><b><input type="number" id="en_x" step="0.1"> m</b></div><input type="range" id="er_x" min="-10" max="10" step="0.05"></div>
     <div class="fld" id="ef_y"><div class="lab"><span>y (desde el centro, en dirección de L)</span><b><input type="number" id="en_y" step="0.1"> m</b></div><input type="range" id="er_y" min="-10" max="10" step="0.05"></div>
     <div class="fld"><div class="lab"><span>Profundidad z (bajo el sello)</span><b><input type="number" id="en_z" step="0.1"> m</b></div><input type="range" id="er_z" min="0" max="20" step="0.05"></div>
+    <button class="btnPri" id="eCentrar" style="width:100%;margin:2px 0 6px">Centrar el punto · dividir en 4 rectángulos iguales</button>
     <p class="note">Arrastra el punto rojo en el dibujo o muévelo con las flechas del teclado.</p>
     <p class="sub" style="margin:8px 0 4px">Puntos del tablero</p>
     <div class="chips" id="eAtajos" style="margin:0"></div>
@@ -2928,6 +2929,7 @@ function sinc(){
   $("eNotaQ").innerHTML=conP?`q<sub>cont</sub> = P / A = ${fmt(E.P,0)} / ${fmt(area(),cor?2:3)} = <b>${fmt(E.q,1)} kPa</b>${cor?" (A = B × 1 m)":(E.forma==="circ"?" (A = π·B²/4)":"")}`:"";
   if(!VISTAS_DE[E.forma].includes(E.vista))E.vista=VISTAS_DE[E.forma][0];
   if(!METODOS_DE[E.forma].includes(E.metodo))E.metodo="tabla";
+  $("eCentrar").textContent=E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo el centro":"Centrar el punto · dividir en 4 rectángulos iguales");
   $("ef_L").style.display=E.forma==="rect"?"":"none";$("ef_y").style.display=E.forma==="corr"?"none":"";
   $("eNotaL").innerHTML=E.forma==="cuad"?"Cuadrada: L = B.":(E.forma==="corr"?"Corrida: L = ∞ (se analiza una franja de 1 m).":(E.forma==="circ"?"Circular: B es el diámetro.":""));
   $("eLabB").textContent=E.forma==="circ"?"Diámetro B":"Ancho B";
@@ -2956,6 +2958,7 @@ const cambio=()=>{programar();guardar();};
   $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;cambio();}});});
 const seg=(id,f)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;f(b.dataset.v);cambio();});
 seg("eForma",v=>{E.forma=v;});seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
+$("eCentrar").addEventListener("click",()=>{E.x=0;E.y=0;if(E.vista!=="planta"&&VISTAS_DE[E.forma].includes("planta"))E.vista="planta";cambio();});
 $("eAtajos").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(E.forma!=="corr"){E.forma="rect";E.B=3;E.L=4;}else E.B=3;E.q=200;E.P=Math.round(200*(E.forma==="corr"?3:12));E.x=+b.dataset.x;E.y=+b.dataset.y;E.z=+b.dataset.z;cambio();});
 // arrastrar el punto en la planta y moverlo con el teclado
