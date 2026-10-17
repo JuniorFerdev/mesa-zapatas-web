@@ -2929,14 +2929,16 @@ function sinc(){
   $("eNotaQ").innerHTML=conP?`q<sub>cont</sub> = P / A = ${fmt(E.P,0)} / ${fmt(area(),cor?2:3)} = <b>${fmt(E.q,1)} kPa</b>${cor?" (A = B × 1 m)":(E.forma==="circ"?" (A = π·B²/4)":"")}`:"";
   if(!VISTAS_DE[E.forma].includes(E.vista))E.vista=VISTAS_DE[E.forma][0];
   if(!METODOS_DE[E.forma].includes(E.metodo))E.metodo="tabla";
-  $("eCentrar").textContent=E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo el centro":"Centrar el punto · dividir en 4 rectángulos iguales");
+  const tc=E.vista==="newmark"?"Centrar la zapata en la carta (punto bajo la carga P)":(E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo la carga P (centro del círculo)":"Centrar el punto · dividir en 4 rectángulos iguales"));
+  $("eCentrar").textContent=tc;
   $("ef_L").style.display=E.forma==="rect"?"":"none";$("ef_y").style.display=E.forma==="corr"?"none":"";
   $("eNotaL").innerHTML=E.forma==="cuad"?"Cuadrada: L = B.":(E.forma==="corr"?"Corrida: L = ∞ (se analiza una franja de 1 m).":(E.forma==="circ"?"Circular: B es el diámetro.":""));
   $("eLabB").textContent=E.forma==="circ"?"Diámetro B":"Ancho B";
   const pr=(id,v)=>document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(v))));
   pr("eForma",E.forma);pr("eMetodo",E.metodo);pr("eVel",E.vel);pr("eModoQ",E.modoQ);
   document.querySelectorAll("#eMetodo button").forEach(b=>b.hidden=!METODOS_DE[E.forma].includes(b.dataset.v));
-  $("eVistas").innerHTML=VISTAS.filter(([k])=>VISTAS_DE[E.forma].includes(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("");
+  $("eVistas").innerHTML=VISTAS.filter(([k])=>VISTAS_DE[E.forma].includes(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("")+
+    `<button class="chip" id="eCentrar2" title="${tc}" style="margin-left:auto;font-weight:600">⊕ centrar</button>`;
   $("eMetNota").textContent={tabla:E.forma==="corr"?"Lectura del ábaco del curso (puntos del tablero).":"Interpolación bilineal en la Tabla 13 (lo que se hace a mano).",exacto:"Fórmula exacta de Boussinesq (chequeo).",21:"Reparto 2V:1H: aproximado, solo bajo el centro.",newmark:"Conteo de elementos en la carta: Δσ = q·Vi·N."}[E.metodo];
   $("eAtajos").parentElement.querySelector(".sub").style.display=$("eAtajos").style.display=(E.forma==="rect"||E.forma==="corr")?"":"none";
   $("eAtajos").innerHTML=(E.forma==="corr"?[["0; 0,5",0,1.5],["0; 1",0,3],["0; 2",0,6],["0; 3",0,9],["0,33; 1",1,3],["0,5; 1",1.5,3],["1; 1",3,3]].map(([n,x,z])=>`<button class="chip" data-x="${x}" data-y="0" data-z="${z}" title="x/B; z/B">${n}</button>`)
@@ -2958,7 +2960,10 @@ const cambio=()=>{programar();guardar();};
   $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;cambio();}});});
 const seg=(id,f)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;f(b.dataset.v);cambio();});
 seg("eForma",v=>{E.forma=v;});seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
-$("eCentrar").addEventListener("click",()=>{E.x=0;E.y=0;if(E.vista!=="planta"&&VISTAS_DE[E.forma].includes("planta"))E.vista="planta";cambio();});
+/* centrar el punto bajo la carga P en cualquier forma y vista (planta, Newmark, ábacos): la vista no cambia */
+const centrar=()=>{E.x=0;E.y=0;cambio();};
+$("eCentrar").addEventListener("click",centrar);
+$("eVistas").addEventListener("click",e=>{if(e.target.closest("#eCentrar2")){e.stopPropagation();centrar();}},true);
 $("eAtajos").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(E.forma!=="corr"){E.forma="rect";E.B=3;E.L=4;}else E.B=3;E.q=200;E.P=Math.round(200*(E.forma==="corr"?3:12));E.x=+b.dataset.x;E.y=+b.dataset.y;E.z=+b.dataset.z;cambio();});
 // arrastrar el punto en la planta y moverlo con el teclado
