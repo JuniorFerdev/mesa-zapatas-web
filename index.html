@@ -8,8 +8,17 @@
 <meta name="theme-color" content="#1F3A5F">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icono-192.png">
-<link rel="apple-touch-icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cimentaciones">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script>/* app instalable: solo cuando se sirve por http(s), no al abrir el archivo local */
+addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),
+  instalada=navigator.standalone||matchMedia("(display-mode: standalone)").matches,av=document.getElementById("avisoIOS");let visto=false;
+  try{visto=localStorage.getItem("avisoIOS")==="1";}catch(e){}
+  if(ios&&!instalada&&!visto)av.hidden=false;
+  document.getElementById("avisoIOSx").onclick=()=>{av.hidden=true;try{localStorage.setItem("avisoIOS","1");}catch(e){}};});
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js"));</script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
@@ -213,6 +222,9 @@ details.acc[open] summary::before{content:"− "}
 }
 @media(min-width:1900px){.et3{font-size:12.5px}.et3.suelo{font-size:13.5px}.et3.inf{font-size:14.5px}}
 
+.aviso-ios{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px;line-height:1.4;padding:10px 12px;margin-bottom:10px;
+  border-radius:10px;background:var(--panel);border:1px solid var(--agua2);color:var(--tinta)}
+.aviso-ios[hidden]{display:none}.aviso-ios .ico{font-family:var(--fm);border:1px solid var(--linea);border-radius:5px;padding:0 5px}
 /* módulo de incremento de esfuerzos */
 .etabla{overflow-x:auto;margin-top:8px}
 .etabla table{border-collapse:collapse;font-family:var(--fm);font-size:11px;width:100%;font-variant-numeric:tabular-nums}
@@ -287,6 +299,10 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 </head>
 <body>
 <div class="wrap">
+<div id="avisoIOS" class="aviso-ios" hidden>
+  <b>Instálala en tu iPhone:</b> toca <span class="ico">⋯</span> o <span class="ico">⬆︎ Compartir</span> abajo en Safari → <b>«Agregar a inicio»</b> → <b>Agregar</b>.
+  <button class="btnmini" id="avisoIOSx" aria-label="Cerrar aviso">entendido</button>
+</div>
 <header>
   <div>
     <h1>Mesa de cálculo — cimentaciones superficiales</h1>
