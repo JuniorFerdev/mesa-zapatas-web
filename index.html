@@ -511,7 +511,6 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <p class="note">q<sub>cont</sub> es la presión que transmite la zapata (carga ÷ área), <b>no</b> la capacidad última q<sub>u</sub>.</p>
   </div></section>
   <section class="card"><h2>Punto de interés</h2><div class="body">
-    <button class="btnPri" id="eCentrar" style="width:100%;margin:0 0 10px">Centrar el punto · dividir en 4 rectángulos iguales</button>
     <div class="fld" id="ef_x"><div class="lab"><span id="eLabX">x (desde el centro, en dirección de B)</span><b><input type="number" id="en_x" step="0.1"> m</b></div><input type="range" id="er_x" min="-10" max="10" step="0.05"></div>
     <div class="fld" id="ef_y"><div class="lab"><span>y (desde el centro, en dirección de L)</span><b><input type="number" id="en_y" step="0.1"> m</b></div><input type="range" id="er_y" min="-10" max="10" step="0.05"></div>
     <div class="fld"><div class="lab"><span>Profundidad z (bajo el sello)</span><b><input type="number" id="en_z" step="0.1"> m</b></div><input type="range" id="er_z" min="0" max="20" step="0.05"></div>
@@ -530,6 +529,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   <section class="card stage">
     <div class="capas" id="eVistas"></div>
     <svg class="dib" id="eSvg" viewBox="0 0 900 650" tabindex="0" role="img" aria-label="Dibujo del incremento de esfuerzos"></svg>
+    <button class="btnPri" id="eCentrar" style="width:100%;margin:8px 0 2px;padding:10px 12px;font-size:14px">⊕ Centrar el punto · dividir en 4 rectángulos iguales</button>
     <div id="eTabla" class="etabla" hidden></div>
     <div class="pie" id="ePie"></div>
   </section>
@@ -2930,15 +2930,14 @@ function sinc(){
   if(!VISTAS_DE[E.forma].includes(E.vista))E.vista=VISTAS_DE[E.forma][0];
   if(!METODOS_DE[E.forma].includes(E.metodo))E.metodo="tabla";
   const tc=E.vista==="newmark"?"Centrar la zapata en la carta (punto bajo la carga P)":(E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo la carga P (centro del círculo)":"Centrar el punto · dividir en 4 rectángulos iguales"));
-  $("eCentrar").textContent=tc;
+  $("eCentrar").textContent="⊕ "+tc;
   $("ef_L").style.display=E.forma==="rect"?"":"none";$("ef_y").style.display=E.forma==="corr"?"none":"";
   $("eNotaL").innerHTML=E.forma==="cuad"?"Cuadrada: L = B.":(E.forma==="corr"?"Corrida: L = ∞ (se analiza una franja de 1 m).":(E.forma==="circ"?"Circular: B es el diámetro.":""));
   $("eLabB").textContent=E.forma==="circ"?"Diámetro B":"Ancho B";
   const pr=(id,v)=>document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(v))));
   pr("eForma",E.forma);pr("eMetodo",E.metodo);pr("eVel",E.vel);pr("eModoQ",E.modoQ);
   document.querySelectorAll("#eMetodo button").forEach(b=>b.hidden=!METODOS_DE[E.forma].includes(b.dataset.v));
-  $("eVistas").innerHTML=VISTAS.filter(([k])=>VISTAS_DE[E.forma].includes(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("")+
-    `<button class="chip" id="eCentrar2" title="${tc}" style="margin-left:auto;font-weight:600">⊕ centrar</button>`;
+  $("eVistas").innerHTML=VISTAS.filter(([k])=>VISTAS_DE[E.forma].includes(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("");
   $("eMetNota").textContent={tabla:E.forma==="corr"?"Lectura del ábaco del curso (puntos del tablero).":"Interpolación bilineal en la Tabla 13 (lo que se hace a mano).",exacto:"Fórmula exacta de Boussinesq (chequeo).",21:"Reparto 2V:1H: aproximado, solo bajo el centro.",newmark:"Conteo de elementos en la carta: Δσ = q·Vi·N."}[E.metodo];
   $("eAtajos").parentElement.querySelector(".sub").style.display=$("eAtajos").style.display=(E.forma==="rect"||E.forma==="corr")?"":"none";
   $("eAtajos").innerHTML=(E.forma==="corr"?[["0; 0,5",0,1.5],["0; 1",0,3],["0; 2",0,6],["0; 3",0,9],["0,33; 1",1,3],["0,5; 1",1.5,3],["1; 1",3,3]].map(([n,x,z])=>`<button class="chip" data-x="${x}" data-y="0" data-z="${z}" title="x/B; z/B">${n}</button>`)
