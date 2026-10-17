@@ -2967,7 +2967,9 @@ svg.addEventListener("pointerdown",ev=>{if(E.vista==="newmark"&&geoN){const pt=s
     svg.onpointermove=e=>{const p=loc(e);E.x=Math.round((ini[0]-(p.x-p0.x)/geoN.k)*20)/20;if(E.forma!=="corr")E.y=Math.round((ini[1]+(p.y-p0.y)/geoN.k)*20)/20;programar();};
     svg.onpointerup=()=>{svg.onpointermove=null;guardar();};return;}
   if(!geo||E.vista!=="planta")return;const m=aMetros(ev);if(m.px>620)return;svg.setPointerCapture(ev.pointerId);
-  const mover=e=>{const q=aMetros(e);E.x=Math.round(q.x*20)/20;if(E.forma!=="corr")E.y=Math.round(q.y*20)/20;programar();};
+  // al arrastrar con el dedo o el mouse, el punto no se aleja más de 1 m del borde de la zapata
+  const lim=(v,h)=>Math.max(-h-1,Math.min(h+1,v)),hL=E.forma==="corr"?0:Lr()/2;
+  const mover=e=>{const q=aMetros(e);E.x=Math.round(lim(q.x,E.B/2)*20)/20;if(E.forma!=="corr")E.y=Math.round(lim(q.y,hL)*20)/20;programar();};
   mover(ev);svg.onpointermove=mover;svg.onpointerup=()=>{svg.onpointermove=null;guardar();};});
 svg.addEventListener("keydown",e=>{const d=e.shiftKey?0.5:0.1,k={ArrowLeft:[-d,0],ArrowRight:[d,0],ArrowUp:[0,d],ArrowDown:[0,-d]}[e.key];
   if(!k)return;e.preventDefault();E.x=Math.round((E.x+k[0])*100)/100;if(E.forma!=="corr")E.y=Math.round((E.y+k[1])*100)/100;cambio();});
