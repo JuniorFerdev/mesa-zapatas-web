@@ -14,7 +14,7 @@ if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventLis
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
-  color-scheme:light dark;
+  color-scheme:light;
   --papel:#E4E2D9; --panel:#FBFAF6; --panel2:#F1EFE7; --linea:#CBC7B8; --linea2:#E0DCD0;
   --tinta:#1F3A5F; --tinta2:#57657A; --tinta3:#8B94A2;
   --agua:#9FBDD4; --agua2:#2E86C1; --falla:#B03A2E; --ok:#1E8449; --medio:#B7791F; --hormigon:#C3CBD4;
@@ -22,11 +22,7 @@ if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventLis
   --fs:'IBM Plex Sans',system-ui,-apple-system,sans-serif; --fm:'IBM Plex Mono',ui-monospace,monospace;
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --papel:#10161E; --panel:#18202A; --panel2:#202A36; --linea:#313C4A; --linea2:#27303C;
-  --tinta:#DCE4EE; --tinta2:#98A5B6; --tinta3:#6A7787;
-  --agua:#2C4457; --agua2:#57A9DC; --falla:#E0705F; --ok:#5FBF83; --medio:#E0A64B; --hormigon:#4A5460;
-}}
+
 :root[data-theme="dark"]{
   --papel:#10161E; --panel:#18202A; --panel2:#202A36; --linea:#313C4A; --linea2:#27303C;
   --tinta:#DCE4EE; --tinta2:#98A5B6; --tinta3:#6A7787;
@@ -304,9 +300,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   <div class="seg" id="segMetodo" role="group" aria-label="Método de cálculo">
     <button data-v="vesic">Vesić / EGCC</button><button data-v="terzaghi">Terzaghi</button>
   </div>
-  <div class="seg" id="segTema" role="group" aria-label="Tema">
-    <button data-v="light">Claro</button><button data-v="dark">Oscuro</button>
-  </div>
+
 </header>
 
 <div class="asist" id="asist" hidden role="dialog" aria-label="Nuevo ejercicio paso a paso">
@@ -2351,7 +2345,7 @@ seg("segVista",v=>S.vista=v);seg("segDim",v=>S.dim=v);
 $("bar3").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!visor||!visor.ok)return;
   if(b.id==="btnCorte"){S.corte3d=!S.corte3d;cambio();return;}
   if(b.dataset.vista==="encuadrar")visor.encuadrar();else visor.vista(b.dataset.vista);});seg("segSweep",v=>S.sweep=v);seg("segEje",v=>S.eje=v);
-seg("segTema",v=>document.documentElement.setAttribute("data-theme",v));
+
 $("tipos").addEventListener("click",e=>{const b=e.target.closest(".tipo");if(!b)return;S.tipo=b.dataset.v;S.zc=null;cambio();});
 $("capas").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;S.capas[b.dataset.c]=!S.capas[b.dataset.c];cambio();});
 $("presetSuelo").innerHTML=Object.keys(SUELOS).map(k=>`<button class="chip" data-p="${k}"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:url(${urlSuelo(SUELOS[k])}) 0 0/36px;margin-right:5px;vertical-align:-2px"></span>${SUELOS[k].nom}</button>`).join("");
@@ -2513,7 +2507,7 @@ $("aCuerpo").addEventListener("click",e=>{const b=e.target.closest("button");if(
   cambio();pintarAsist();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("asist").hidden)cerrarAsist();});
 
-document.documentElement.setAttribute("data-theme",matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+document.documentElement.setAttribute("data-theme","light");   // solo modo claro (menos ruido visual)
 new MutationObserver(()=>{document.querySelectorAll("#segTema button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===document.documentElement.getAttribute("data-theme"))));programar();})
   .observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 render();
