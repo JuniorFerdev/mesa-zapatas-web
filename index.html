@@ -247,6 +247,12 @@ details.acc[open] summary::before{content:"− "}
   #informe .chk em{display:block;font-style:normal;color:#57657A;font-size:9pt}
   #informe .matriz{display:grid;grid-template-columns:110px repeat(3,1fr);gap:3px;font-size:8.5pt}
   #informe .celda{border:1px solid #DDD;padding:3px}#informe .celda.act{border:2px solid #B03A2E}
+  #informe,#informe *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #informe table.t13{font-family:var(--fm);font-size:7.5pt;font-variant-numeric:tabular-nums}
+  #informe table.t13 th,#informe table.t13 td{padding:1px 3px;text-align:right;width:auto}
+  #informe table.t13 td.vec{background:#BFD9EE;border:2px solid #2E86C1;font-weight:700;color:#1F3A5F}
+  #informe table.t13 sup{color:#B03A2E;font-weight:700;margin-left:1px}
+  #informe table.t13det{margin-top:6px;font-size:9pt}#informe table.t13det th{width:auto}
   #informe footer{margin-top:14px;border-top:1px solid #CBC7B8;padding-top:6px;font-size:8.5pt;color:#57657A}
   #informe .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
 }
@@ -3081,7 +3087,23 @@ svg.addEventListener("pointerdown",ev=>{if(E.vista==="newmark"&&geoN){const pt=s
   mover(ev);svg.onpointermove=mover;svg.onpointerup=()=>{svg.onpointermove=null;guardar();};});
 svg.addEventListener("keydown",e=>{const d=e.shiftKey?0.5:0.1,k={ArrowLeft:[-d,0],ArrowRight:[d,0],ArrowUp:[0,d],ArrowDown:[0,-d]}[e.key];
   if(!k)return;e.preventDefault();E.x=Math.round((E.x+k[0])*100)/100;if(E.forma!=="corr")E.y=Math.round((E.y+k[1])*100)/100;cambio();});
-window.ESFI={informe:()=>({E:JSON.parse(JSON.stringify(E)),r:ultimoR,pasos:pasos.map(p=>({t:p.t,h:p.h})),link:null})};
+/* Tabla 13 para el informe: marca las celdas que usa cada rectángulo (las 4 de la interpolación, o la celda exacta),
+   con su número de rectángulo, y debajo la interpolación de cada uno */
+function tablaInforme(r){
+  if(!(r&&r.desc&&E.z>1e-9)||!(E.forma==="rect"||E.forma==="cuad"))return "";
+  const usos={},det=[];
+  r.desc.rects.forEach((g,i)=>{const m=g.b/E.z,n=g.l/E.z,T=ESF.interpTabla(m,n);
+    T.idx.f.forEach(fi=>T.idx.c.forEach(cj=>{if(fi<0||cj<0)return;const k=fi+"_"+cj;(usos[k]=usos[k]||[]).push(i+1);}));
+    det.push(`<tr><td>${i+1} (${g.signo>0?"+":"−"}${Math.abs(g.signo)>1?" ×"+Math.abs(g.signo):""})</td><td>m = ${fmt(m,3)} · n = ${fmt(n,3)}</td><td>fila ${fmt(T.fila[0],1)}–${fmt(T.fila[1],1)} · col. ${fmt(T.col[0],1)}–${fmt(T.col[1],1)}</td>
+      <td>I<sub>a</sub> = ${fmt(T.intermedios.Ia,4)} · I<sub>b</sub> = ${fmt(T.intermedios.Ib,4)} → <b>I = ${fmt(T.I,4)}</b> (gráfica ≈ ${fmt(ESF.lecturaAbaco(m,n),3)} · exacto ${fmt(T.exacto,4)})</td></tr>`);});
+  const cab=ESF.COLS.map(c=>c===Infinity?"∞":fmt(c,1));
+  return `<table class="t13"><caption>Tabla 13 — I(m,n): las celdas marcadas son las que se usan (el número indica el rectángulo)</caption>
+    <tr><th>m \\ n</th>${cab.map(c=>`<th>${c}</th>`).join("")}</tr>`+
+    ESF.FILAS.map((f,i)=>`<tr><th>${f===Infinity?"∞":fmt(f,1)}</th>${ESF.TABLA13[i].map((v,j)=>{const u=usos[i+"_"+j];
+      return `<td class="${u?"vec":""}">${fmt(v,4)}${u?`<sup>${u.join(",")}</sup>`:""}</td>`;}).join("")}</tr>`).join("")+`</table>
+    <table class="t13det"><tr><th>Rect.</th><th>m y n</th><th>Entre</th><th>Interpolación</th></tr>${det.join("")}</table>`;
+}
+window.ESFI={informe:()=>({E:JSON.parse(JSON.stringify(E)),r:ultimoR,pasos:pasos.map(p=>({t:p.t,h:p.h})),link:null,tabla:tablaInforme(ultimoR)})};
 new MutationObserver(()=>programar()).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 aplicarModulo();
 })();
@@ -3134,7 +3156,8 @@ function esfuerzos(){
   const pasos=`<ol class="pasos">${d.pasos.map(p=>`<li><b>${p.t}</b><br>${p.h}</li>`).join("")}</ol>`;
   return `<h1>Incremento de esfuerzos</h1>`+sec("Datos",datos)+
     sec("Resultado",`<p class="grande">Δσ<sub>z</sub> = ${fmt(r.valor,1)} kPa</p><p>${esc(r.origen||"")}</p><div class="ecomp">${$("eComp").innerHTML}</div>`)+
-    sec("Figura",figura("eSvg","e3c",E.vista==="3d")+(E.vista==="abaco"?$("eTabla").innerHTML:""))+
+    sec("Figura",figura("eSvg","e3c",E.vista==="3d"))+
+    sec("Tabla 13 — celdas usadas e interpolación",d.tabla)+
     sec("Desarrollo paso a paso",pasos)+sec("Verificaciones",$("eChk").innerHTML);
 }
 
