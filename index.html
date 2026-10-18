@@ -225,6 +225,31 @@ details.acc[open] summary::before{content:"− "}
 .aviso-ios{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px;line-height:1.4;padding:10px 12px;margin-bottom:10px;
   border-radius:10px;background:var(--panel);border:1px solid var(--agua2);color:var(--tinta)}
 .aviso-ios[hidden]{display:none}.aviso-ios .ico{font-family:var(--fm);border:1px solid var(--linea);border-radius:5px;padding:0 5px}
+/* informe para imprimir / guardar como PDF */
+#informe{display:none}
+@media print{
+  @page{margin:14mm}
+  body{background:#fff}
+  body>*:not(#informe){display:none!important}
+  #informe{display:block;font-family:var(--fs);color:#1F3A5F;font-size:11pt;line-height:1.45}
+  #informe header{display:flex;justify-content:space-between;gap:12px;border-bottom:2px solid #1F3A5F;padding-bottom:6px;margin-bottom:10px;font-size:10pt}
+  #informe h1{font-size:18pt;margin:6px 0 10px}
+  #informe h2{font-size:12.5pt;margin:14px 0 6px;border-bottom:1px solid #CBC7B8;padding-bottom:2px}
+  #informe section{break-inside:avoid-page}
+  #informe table{border-collapse:collapse;width:100%;font-size:10pt}
+  #informe th,#informe td{border:1px solid #DDD8CA;padding:3px 6px;text-align:left;vertical-align:top}
+  #informe th{width:28%;background:#F1EFE7}
+  #informe .grande{font-family:var(--fm);font-size:20pt;font-weight:600;margin:4px 0}
+  #informe pre{font-family:var(--fm);font-size:9pt;white-space:pre-wrap;background:#F6F4EE;padding:8px;border-radius:4px}
+  #informe .fig{display:block;width:100%;height:auto;max-height:150mm;margin:4px 0;break-inside:avoid}
+  #informe ol.pasos li{margin:0 0 7px;break-inside:avoid}#informe .ec{display:block;font-family:var(--fm);font-size:9.5pt}
+  #informe .ecomp .fila,#informe .chk{display:flex;gap:8px;justify-content:space-between;border-bottom:1px solid #EEE;padding:2px 0;font-size:10pt}
+  #informe .chk em{display:block;font-style:normal;color:#57657A;font-size:9pt}
+  #informe .matriz{display:grid;grid-template-columns:110px repeat(3,1fr);gap:3px;font-size:8.5pt}
+  #informe .celda{border:1px solid #DDD;padding:3px}#informe .celda.act{border:2px solid #B03A2E}
+  #informe footer{margin-top:14px;border-top:1px solid #CBC7B8;padding-top:6px;font-size:8.5pt;color:#57657A}
+  #informe .dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+}
 /* módulo de incremento de esfuerzos */
 .etabla{overflow-x:auto;margin-top:8px}
 .etabla table{border-collapse:collapse;font-family:var(--fm);font-size:11px;width:100%;font-variant-numeric:tabular-nums}
@@ -311,6 +336,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   <div class="seg modulos" id="segModulo" role="tablist" aria-label="Módulo">
     <button data-v="cap" role="tab">Capacidad de carga</button><button data-v="esf" role="tab">Incremento de esfuerzos</button>
   </div>
+  <button class="btn2" id="btnPDF" title="Solución completa del ejercicio en pantalla">📄 Exportar PDF</button>
   <div class="sp"></div>
   <button class="btnPri" id="btnAsist">Nuevo ejercicio paso a paso</button>
   <div class="seg" id="segMetodo" role="group" aria-label="Método de cálculo">
@@ -496,6 +522,13 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 <div class="main" id="mainEsf" hidden>
 <div class="col izq">
   <section class="card"><h2>Zapata y carga</h2><div class="body">
+    <div class="seg full" id="eVinc" role="group" aria-label="Vínculo con capacidad de carga" style="margin-bottom:6px">
+      <button data-v="1">🔗 mismo ejercicio que capacidad</button><button data-v="0">independiente</button>
+    </div>
+    <p class="note" id="eNotaVinc" style="margin:0 0 9px"></p>
+    <div class="seg full" id="eQtipo" role="group" aria-label="Presión" style="margin-bottom:9px">
+      <button data-v="bruta">q bruta = P/A'</button><button data-v="neta">q neta = P/A' − γ·D<sub>f</sub></button>
+    </div>
     <div class="seg full" id="eForma" role="group" aria-label="Forma" style="margin-bottom:10px">
       <button data-v="rect">rectangular</button><button data-v="cuad">cuadrada</button><button data-v="corr">corrida</button><button data-v="circ">circular</button>
     </div>
@@ -530,6 +563,12 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <div class="capas" id="eVistas"></div>
     <svg class="dib" id="eSvg" viewBox="0 0 900 650" tabindex="0" role="img" aria-label="Dibujo del incremento de esfuerzos"></svg>
     <button class="btnPri" id="eCentrar" style="width:100%;margin:8px 0 2px;padding:10px 12px;font-size:14px">⊕ Centrar el punto · dividir en 4 rectángulos iguales</button>
+    <div class="v3" id="e3" hidden style="height:clamp(380px,calc(100vh - 260px),1100px)">
+      <canvas id="e3c" tabindex="0" aria-label="Vista 3D del ejercicio vinculado"></canvas>
+      <div class="et3cap" id="e3et"></div>
+      <div class="info3" id="e3info"></div>
+      <div class="ayuda3"><span class="pc">Arrastra: girar · Shift o clic derecho: desplazar · Rueda: acercar</span><span class="tac">Un dedo: girar · Dos dedos: acercar y desplazar</span></div>
+    </div>
     <div id="eTabla" class="etabla" hidden></div>
     <div class="pie" id="ePie"></div>
   </section>
@@ -1162,10 +1201,14 @@ function crearVisor3D(cv,capa){
       case "+":case "=":acercar(0.88);break; case "-":acercar(1.14);break;
       case "f":encuadrar();return; default:return;}
     e.preventDefault();if(m)cam.t=add(cam.t,m);pedir();});
-  if(window.ResizeObserver)new ResizeObserver(en=>{const r=en[en.length-1].contentRect;cssW=r.width;cssH=r.height;pedir();}).observe(cv);
+  if(window.ResizeObserver)new ResizeObserver(en=>{const r=en[en.length-1].contentRect;cssW=r.width;cssH=r.height;if(encuadrarPend&&cssW>0){encuadrarPend=false;encuadrar();}pedir();}).observe(cv);
 
   /* ---------- vistas ---------- */
-  function encuadrar(){const c=caja0,cor=c.tipo==="corrida";tamano();if(!(W>1))W=cv.clientWidth||1,H=cv.clientHeight||1;
+  let encuadrarPend=false;
+  function encuadrar(){const c=caja0,cor=c.tipo==="corrida";
+    const cw=cv.clientWidth,ch=cv.clientHeight;
+    if(!(cw>0&&ch>0)){encuadrarPend=true;return;}      // aún sin tamaño (panel recién mostrado): se encuadra al conocerlo
+    W=cw;H=ch;
     const estrecho=Math.max(1,1.3/(W/H));           // pantallas verticales (teléfono): alejarse más
     const f=c.foco;                                  // se encuadra la zona de interés, no todo el bloque
     cam.t=[0,-f.prof*0.45,0];cam.d=Math.max(f.hx*2,f.prof*1.3)*1.35*estrecho;pedir();}
@@ -1319,6 +1362,12 @@ function crearVisor3D(cv,capa){
     etiqueta([0,-Df-0.05,zf],`B = ${fmt(B)} m`,"cota");
     if(!cor&&!circ)etiqueta([B/2,-Df-0.05,-L/4],`L = ${fmt(L)} m`,"cota");
 
+    /* capas extra que agrega otra pestaña (incremento de esfuerzos): cuadriláteros, líneas y rótulos */
+    if(M.extra){const X=M.extra;
+      (X.quads||[]).forEach(o=>{const g=new Tri();g.quad(...o.p);subir(g,o.col,o.alfa!=null?o.alfa:.4,{prio:o.prio||7,luz:0});});
+      (X.lineas||[]).forEach(o=>{const l=new Lin();l.poli(o.pts);subir(l,o.col,o.alfa!=null?o.alfa:1);});
+      (X.cajas||[]).forEach(o=>{const g=new Tri();caja(g,...o.b);subir(g,o.col,o.alfa!=null?o.alfa:1,{prio:o.prio||8});});
+      (X.etiquetas||[]).forEach(o=>etiqueta(o.pos,o.html,o.clase||"falla"));}
     if(ultimoTipo!==M.tipo){ultimoTipo=M.tipo;encuadrar();}
     pedir();
   }
@@ -2335,7 +2384,7 @@ function render(){
   pend=false;normalizar();
   if(S.modo!=="dos"&&SW[S.sweep].dos)S.sweep="Df";
   sinc();
-  const R=sistema(S),LC=carga(R);
+  const R=sistema(S),LC=carga(R);ultimo={R,LC};
   const d3=S.dim==="3d";
   $("sec").style.display=d3?"none":"";$("pie2d").style.display=d3?"none":"";$("v3").style.display=d3?"":"none";
   if(d3)pintar3D(R,LC);else dibujarSeccion(R,LC);
@@ -2344,6 +2393,19 @@ function render(){
 }
 function programar(){if(!pend){pend=true;requestAnimationFrame(()=>{render();});}}
 const cambio=()=>{rapido=false;programar();guardar();};
+/* ===================== PUENTE CON LA PESTAÑA DE ESFUERZOS (ejercicio vinculado) ===================== */
+let ultimo=null;
+window.MZ={
+  /* estado del ejercicio de capacidad (copia) y el último resultado calculado */
+  estado:()=>{normalizar();const R=sistema(S),LC=carga(R);ultimo={R,LC};return {S:cp(S),R,LC};},
+  /* la otra pestaña cambia geometría o carga: se aplica aquí y se recalcula */
+  aplicar:patch=>{Object.assign(S,patch);S.zc=null;normalizar();guardar();programar();},
+  /* escena 3D base (suelos, agua, zapata, bulbos) para reutilizarla en la otra pestaña */
+  escena:()=>{normalizar();const R=sistema(S),LC=carga(R);return escena3D(R,LC);},
+  sistema,carga,
+  /* datos para el informe PDF de capacidad de carga */
+  informe:()=>({S:cp(S),R:ultimo&&ultimo.R,LC:ultimo&&ultimo.LC})
+};
 /* mientras se arrastra un control: dibujo con malla gruesa (los números siguen siendo exactos);
    al soltar, 0,22 s después, se repinta todo a resolución completa */
 let rapido=false,tFino=null;
@@ -2551,7 +2613,7 @@ const txt=(g,x,y,s,o)=>{o=o||{};const t=el("text",Object.assign({x,y,fill:o.fill
 const MUEVE=!matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------------- estado ---------------- */
-const DEF={forma:"rect",B:3,L:4,q:200,P:2400,modoQ:"q",x:0,y:0,z:1.5,metodo:"tabla",vista:"planta",vel:1};
+const DEF={vinc:true,qtipo:"bruta",forma:"rect",B:3,L:4,q:200,P:2400,modoQ:"q",x:0,y:0,z:1.5,metodo:"tabla",vista:"planta",vel:1};
 let E=Object.assign({},DEF);
 try{const g=localStorage.getItem("esf.v1");if(g)E=Object.assign({},DEF,JSON.parse(g));}catch(e){}
 const guardar=()=>{try{localStorage.setItem("esf.v1",JSON.stringify(E));}catch(e){}};
@@ -2838,6 +2900,34 @@ function dibujarCurvas(r){
     .forEach(([n,c,d],i)=>{svg.appendChild(el("path",{d:`M700 ${100+i*22}h28`,stroke:c,"stroke-width":2.4,"stroke-dasharray":d}));txt(svg,736,104+i*22,n,{fill:V("--tinta2"),mono:false,fs:11.5,halo:false});});
 }
 
+/* ---------------- vista 3D del ejercicio vinculado ---------------- */
+let visorE=null;
+const rampa=t=>{t=Math.min(1,Math.max(0,t));const P=[[0,247,200,110,0],[.08,246,190,92,.35],[.2,240,160,70,.55],[.4,228,118,58,.7],[.7,205,70,52,.8],[1,165,28,40,.9]];
+  for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1];if(t<=b[0]){const u=(t-a[0])/(b[0]-a[0]);return [1,2,3,4].map(k=>(a[k]+(b[k]-a[k])*u)/(k<4?255:1));}}return [165/255,28/255,40/255,.9];};
+function dibujar3D(r){
+  if(!visorE){visorE=crearVisor3D($("e3c"),$("e3et"));}
+  if(!visorE.ok||!LINK||!window.MZ){$("e3info").textContent="La vista 3D necesita el ejercicio vinculado.";return;}
+  const M=window.MZ.escena(),Df=LINK.S.Df,z=E.z,cor=E.forma==="corr",px=E.x+offX,py=(cor?0:E.y)+offY,yT=-Df;
+  const X={quads:[],lineas:[],cajas:[],etiquetas:[]},AZ="#2E86C1",RJ="#B03A2E";
+  // rectángulos de la superposición sobre la base cargada (área efectiva si hay excentricidad)
+  if(r.desc&&z>1e-9){const B=E.B,L=Lr(),p={x:E.x,y:E.y};
+    for(const [xa,sx] of [[B/2,1],[-B/2,-1]])for(const [yb,sy] of [[L/2,1],[-L/2,-1]]){const a=xa-p.x,b=yb-p.y;if(Math.abs(a)<1e-9||Math.abs(b)<1e-9)continue;
+      const sg=sx*sy*Math.sign(a)*Math.sign(b),x0=p.x+offX,x1=xa+offX,z0=p.y+offY,z1=yb+offY,y=yT-0.015;
+      X.quads.push({p:[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]],col:sg>0?AZ:RJ,alfa:.35,prio:9});
+      X.lineas.push({pts:[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1],[x0,y,z0]],col:sg>0?AZ:RJ});}}
+  // punto P y su vertical
+  X.lineas.push({pts:[[px,yT,py],[px,yT-z,py]],col:RJ});
+  const s=Math.max(0.06,E.B*0.03);X.cajas.push({b:[px-s,px+s,yT-z-s,yT-z+s,py-s,py+s],col:RJ,prio:10});
+  X.etiquetas.push({pos:[px,yT-z,py],html:`P · z = ${fmt(z,2)} m · Δσ<sub>z</sub> = ${fmt(r.valor,1)} kPa`,clase:"carga"});
+  // plano horizontal a la profundidad z con el mapa de Δσ (exacto, misma zapata cargada)
+  const hx=M.hx,hz=cor?Math.min(M.hz,hx*1.4):M.hz,na=cor?40:44,nb=cor?2:44,col=[];let mx=0;
+  for(let j=0;j<nb;j++)for(let i=0;i<na;i++){const x=-hx+2*hx*i/(na-1),y=-hz+2*hz*j/(nb-1),v=window.MZ&&dsPunto(LINK.S,x,y,Math.max(z,1e-3));mx=Math.max(mx,v);col.push(...rampa(v));}
+  M.mapas=(M.mapas||[]).concat([{na,nb,col,pt:(i,j)=>[-hx+2*hx*i/(na-1),yT-z,-hz+2*hz*j/(nb-1)]}]);
+  X.etiquetas.push({pos:[hx,yT-z,-hz],html:`plano z = ${fmt(z,2)} m · Δσ máx ${fmt(mx*E.q,1)} kPa`,clase:"bulbo"});
+  M.extra=X;visorE.escena(M);
+  $("e3info").innerHTML=`Δσ<sub>z</sub> en P<br><span class="q">${fmt(r.valor,1)}</span> kPa<br>q<sub>u</sub> ${fmt(LINK.R.qu,1)} kPa · FS ${fmt(LINK.FS,2)}`;
+}
+
 /* ---------------- pasos (guion) ---------------- */
 function construirPasos(r){
   const P=[],ec=(t,h,foco)=>P.push({t,h,foco});
@@ -2912,7 +3002,13 @@ function resultados(r){
   $("eResChip").innerHTML=`<span class="chipm">${mN}</span><span class="chipm">${r.origen}</span>`;
   const filas=[["newmark","Carta de Newmark",r.nm?E.q*r.nm.dsq:null],...(r.abaco!=null?[["abaco","Ábaco Fig. 4 (lectura)",r.abaco]]:[]),["tabla",E.forma==="corr"?"Ábaco del curso (tablero)":(E.forma==="circ"?"Ábaco Fig. 3 (Fang)":"Tabla 13 del curso"),r.tabla],["exacto","Exacto (Boussinesq)",r.exacto],["21","Método 2:1",r.d21]];
   $("eComp").innerHTML=filas.map(([k,n,v])=>`<div class="fila${E.metodo===k?" act":""}"><span>${n}</span><b>${v==null?"—":fmt(v,1)+" kPa"}</b><em>${v==null||!r.exacto?"":(v===r.exacto?"":((v/r.exacto-1)*100>=0?"+":"")+fmt((v/r.exacto-1)*100,1)+" %")}</em></div>`).join("");
+  if(E.vinc&&LINK)$("eComp").innerHTML=`<div class="fila"><span>q<sub>u</sub> (capacidad de carga)</span><b>${fmt(LINK.R.qu,1)} kPa</b><em></em></div>
+    <div class="fila"><span>q<sub>cont</sub> = P/A'${E.qtipo==="neta"?" − γ·D<sub>f</sub>":""}</span><b>${fmt(E.q,1)} kPa</b><em></em></div>
+    <div class="fila act"><span>FS = Q<sub>u</sub>/P</span><b style="color:${LINK.FS<1?"var(--falla)":(LINK.FS<3?"var(--medio)":"var(--ok)")}">${fmt(LINK.FS,2)}</b><em>${LINK.FS>=3?"cumple 3":"menor que 3"}</em></div>`+$("eComp").innerHTML;
   const ch=[],add=(c,t,d)=>ch.push(`<div class="chk"><span class="dot" style="background:${c}"></span><span>${t}<em>${d}</em></span></div>`);
+  if(E.vinc&&LINK&&LINK.e)add("var(--medio)","Excentricidad: carga sobre el área efectiva","Se supone presión uniforme P/A' sobre B' × L' centrada en la carga (Meyerhof), igual que el bulbo de la pestaña de capacidad. La presión real es trapezoidal.");
+  if(E.vinc&&LINK&&E.qtipo==="neta")add("var(--tinta3)","q neta",`q_n = P/A' − γ·D_f = ${fmt(LINK.qb,1)} − ${fmt(LINK.qReal,1)} = ${fmt(E.q,1)} kPa (lo que agrega la zapata; se usa para asentamientos).`);
+  if(E.vinc&&LINK&&LINK.S.modo==="dos")add("var(--medio)","Dos estratos en capacidad","Boussinesq supone suelo homogéneo: el Δσ no cambia con los estratos; mira cuánto llega al contacto en el 3D.");
   if(r.lugar==="fuera")add("var(--medio)","Punto fuera de la zapata","Se usa suma y resta de rectángulos.");
   if(r.tabla!=null&&r.exacto>1e-9&&Math.abs(r.tabla/r.exacto-1)>0.05&&E.forma!=="corr")add("var(--falla)",`La tabla se aleja ${fmt(Math.abs(r.tabla/r.exacto-1)*100,0)} % del exacto`,
     "Se restan factores I casi iguales: el pequeño error de interpolar en la Tabla 13 (columnas 1 y 2 muy separadas) queda grande frente al resultado. No es un error de cálculo; para el informe usa el exacto o una tabla más fina.");
@@ -2926,16 +3022,21 @@ function resultados(r){
 }
 
 /* ---------------- controles ---------------- */
-const VISTAS=[["planta","Planta + rectángulos"],["abaco","Ábaco I(m,n)"],["isob","Isóbaras (cuadrada)"],["corr","Zapata corrida"],["newmark","Carta de Newmark"],["curva","Δσ vs z"],["circ","Circular"]];
+const VISTAS=[["3d","3D (ejercicio vinculado)"],["planta","Planta + rectángulos"],["abaco","Ábaco I(m,n)"],["isob","Isóbaras (cuadrada)"],["corr","Zapata corrida"],["newmark","Carta de Newmark"],["curva","Δσ vs z"],["circ","Circular"]];
 const LISTAS=new Set(VISTAS.map(v=>v[0]));            // las demás vistas llegan en los siguientes pasos
 function sinc(){
   const setN=(k,dec)=>{$("er_"+k).value=E[k];$("en_"+k).value=(+E[k]).toFixed(dec);};
   ["B","L","x","y","z"].forEach(k=>setN(k,2));setN("q",0);setN("P",0);
-  const conP=E.modoQ==="P",cor=E.forma==="corr";
+  const conP=E.modoQ==="P",cor=E.forma==="corr",vin=E.vinc&&LINK;
   $("ef_P").style.display=conP?"":"none";$("er_q").disabled=conP;$("en_q").disabled=conP;
+  $("eModoQ").style.display=vin?"none":"";$("eQtipo").style.display=vin?"":"none";
+  document.querySelectorAll("#eVinc button").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.v==="1")===!!E.vinc)));
+  document.querySelectorAll("#eQtipo button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===E.qtipo)));
+  $("eNotaVinc").innerHTML=vin?`Forma, B, L y P se comparten con <b>Capacidad de carga</b> en tiempo real${LINK.e?` · excentricidad e<sub>B</sub> = ${fmt(LINK.eB,2)}, e<sub>L</sub> = ${fmt(LINK.eL,2)} m → se carga el área efectiva B' × L' = ${fmt(LINK.ef.Bp,2)} × ${LINK.S.tipo==="corrida"?"1":fmt(LINK.ef.Lp,2)}`:""}.`:"Ejercicio suelto (p. ej. los del tablero): no cambia la pestaña de capacidad.";
   $("eLabP").textContent=cor?"Carga del muro P (por metro)":"Carga de la columna P";$("eUnP").textContent=cor?"kN/m":"kN";
   $("eNotaQ").innerHTML=conP?`q<sub>cont</sub> = P / A = ${fmt(E.P,0)} / ${fmt(area(),cor?2:3)} = <b>${fmt(E.q,1)} kPa</b>${cor?" (A = B × 1 m)":(E.forma==="circ"?" (A = π·B²/4)":"")}`:"";
-  if(!VISTAS_DE[E.forma].includes(E.vista))E.vista=VISTAS_DE[E.forma][0];
+  const vistasOK=k=>VISTAS_DE[E.forma].includes(k)||(k==="3d"&&E.vinc&&LINK);
+  if(!vistasOK(E.vista))E.vista=VISTAS_DE[E.forma][0];
   if(!METODOS_DE[E.forma].includes(E.metodo))E.metodo="tabla";
   const tc=E.vista==="newmark"?"Centrar la zapata en la carta (punto bajo la carga P)":(E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo la carga P (centro del círculo)":"Centrar el punto · dividir en 4 rectángulos iguales"));
   $("eCentrar").textContent="⊕ "+tc;
@@ -2945,7 +3046,7 @@ function sinc(){
   const pr=(id,v)=>document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(v))));
   pr("eForma",E.forma);pr("eMetodo",E.metodo);pr("eVel",E.vel);pr("eModoQ",E.modoQ);
   document.querySelectorAll("#eMetodo button").forEach(b=>b.hidden=!METODOS_DE[E.forma].includes(b.dataset.v));
-  $("eVistas").innerHTML=VISTAS.filter(([k])=>VISTAS_DE[E.forma].includes(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("");
+  $("eVistas").innerHTML=VISTAS.filter(([k])=>vistasOK(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("");
   $("eMetNota").textContent={abaco:"Se corta la Fig. 4 a ojo: I con la precisión de la gráfica (media división = 0,005).",tabla:E.forma==="corr"?"Lectura del ábaco del curso (puntos del tablero).":"Valores de la Tabla 13; si m o n caen entre filas o columnas, interpolación bilineal.",exacto:"Fórmula exacta de Boussinesq (chequeo).",21:"Reparto 2V:1H: aproximado, solo bajo el centro.",newmark:"Conteo de elementos en la carta: Δσ = q·Vi·N."}[E.metodo];
   $("eAtajos").parentElement.querySelector(".sub").style.display=$("eAtajos").style.display=(E.forma==="rect"||E.forma==="corr")?"":"none";
   $("eAtajos").innerHTML=(E.forma==="corr"?[["0; 0,5",0,1.5],["0; 1",0,3],["0; 2",0,6],["0; 3",0,9],["0,33; 1",1,3],["0,5; 1",1.5,3],["1; 1",3,3]].map(([n,x,z])=>`<button class="chip" data-x="${x}" data-y="0" data-z="${z}" title="x/B; z/B">${n}</button>`)
@@ -2954,24 +3055,62 @@ function sinc(){
 let pend=false;
 function programar(){if(!pend){pend=true;requestAnimationFrame(render);}}
 let firmaPasos="";
+/* ---------------- vínculo con capacidad de carga ---------------- */
+let LINK=null,offX=0,offY=0;
+const DE_TIPO={corrida:"corr",cuadrada:"cuad",rectangular:"rect",circular:"circ"},A_TIPO={corr:"corrida",cuad:"cuadrada",rect:"rectangular",circ:"circular"};
+function traer(){
+  if(!E.vinc||!window.MZ){LINK=null;return;}
+  const {S,R,LC}=window.MZ.estado(),ef=efectiva(S.tipo,S.B,S.L,S.eB,S.eL);
+  E.forma=DE_TIPO[S.tipo];E.B=S.B;E.L=S.L;E.P=LC.Qv;E.modoQ="P";
+  const qb=LC.Qv/Math.max(ef.A,1e-9);E.q=Math.max(E.qtipo==="neta"?qb-LC.qReal:qb,0);
+  LINK={S,R,LC,ef,eB:S.eB,eL:S.tipo==="corrida"?0:S.eL,e:S.eB>1e-9||S.eL>1e-9,qb,FS:R.Qu/Math.max(LC.Qv,1e-9),qReal:LC.qReal};
+}
+/* cambios hechos en esta pestaña que también son del ejercicio de capacidad */
+function llevar(k){
+  if(!E.vinc||!window.MZ||!LINK)return;const th=LINK.S.theta*Math.PI/180,p={};
+  if(k==="forma")p.tipo=A_TIPO[E.forma];
+  if(k==="B"){p.B=E.B;if(E.forma!=="rect")p.L=E.B;}
+  if(k==="L")p.L=E.L;
+  if(k==="P")p.Q=E.P/Math.max(Math.cos(th),1e-6);
+  if(Object.keys(p).length)window.MZ.aplicar(p);
+}
+/* con excentricidad (Meyerhof) se carga solo el área efectiva B' × L', centrada en el punto de aplicación:
+   mientras se calcula y dibuja, la zapata se reemplaza por esa área y el punto se mide desde su centro */
+function aEfectiva(){
+  if(!(E.vinc&&LINK&&LINK.e))return null;
+  const sv={forma:E.forma,B:E.B,L:E.L,x:E.x,y:E.y},ef=LINK.ef;offX=LINK.eB;offY=LINK.eL;
+  if(E.forma==="circ")E.B=ef.Bef;else if(E.forma==="corr")E.B=ef.Bp;else{E.forma="rect";E.B=ef.Bp;E.L=ef.Lp;}
+  E.x-=offX;E.y-=offY;return sv;
+}
+let ultimoR=null;
 function render(){pend=false;if(modulo!=="esf")return;
-  if(E.modoQ==="P")E.q=E.P/area();sinc();
-  const r=calcular();
+  offX=offY=0;traer();
+  if(!(E.vinc&&LINK)&&E.modoQ==="P")E.q=E.P/area();sinc();
+  const sv=aEfectiva();
+  try{render2();}finally{if(sv)Object.assign(E,sv);}
+}
+function render2(){
+  const r=calcular();ultimoR=r;
+  $("e3").hidden=E.vista!=="3d";$("eSvg").style.display=E.vista==="3d"?"none":"";if(E.vista==="3d")$("eTabla").hidden=true;
+  if(E.vista==="3d"){dibujar3D(r);resultados(r);
+    const nuevos=construirPasos(r),firma=JSON.stringify(nuevos.map(p=>p.h));
+    if(firma!==firmaPasos){firmaPasos=firma;pasos=nuevos;actual=0;mostrarPasos(true);jugar(true);}else mostrarPasos();return;}
   $("eTabla").hidden=E.vista!=="abaco";
   if(E.vista==="curva"||E.vista==="circ")dibujarCurvas(r);else if(E.vista==="newmark")dibujarNewmark(r);else if(E.vista==="abaco")dibujarAbaco(r);else if(E.vista==="isob"||E.vista==="corr")dibujarIsobaras(r);else dibujarPlanta(r);resultados(r);
   const nuevos=construirPasos(r),firma=JSON.stringify(nuevos.map(p=>p.h));
   if(firma!==firmaPasos){firmaPasos=firma;pasos=nuevos;actual=0;mostrarPasos(true);jugar(true);}else mostrarPasos();
 }
 const cambio=()=>{programar();guardar();};
-["B","L","q","P","x","y","z"].forEach(k=>{$("er_"+k).addEventListener("input",e=>{E[k]=+e.target.value;cambio();});
-  $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;cambio();}});});
+["B","L","q","P","x","y","z"].forEach(k=>{$("er_"+k).addEventListener("input",e=>{E[k]=+e.target.value;llevar(k);cambio();});
+  $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;llevar(k);cambio();}});});
 const seg=(id,f)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;f(b.dataset.v);cambio();});
-seg("eForma",v=>{E.forma=v;});seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
+seg("eForma",v=>{E.forma=v;llevar("forma");});seg("eVinc",v=>{E.vinc=v==="1";if(!E.vinc&&E.vista==="3d")E.vista="planta";});seg("eQtipo",v=>E.qtipo=v);seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
 /* centrar el punto bajo la carga P en cualquier forma y vista (planta, Newmark, ábacos): la vista no cambia */
 const centrar=()=>{E.x=0;E.y=0;cambio();};
 $("eCentrar").addEventListener("click",centrar);
 $("eVistas").addEventListener("click",e=>{if(e.target.closest("#eCentrar2")){e.stopPropagation();centrar();}},true);
 $("eAtajos").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  E.vinc=false;E.modoQ="q";                       // los ejercicios del tablero son sueltos: no tocan la pestaña de capacidad
   if(E.forma!=="corr"){E.forma="rect";E.B=3;E.L=4;}else E.B=3;E.q=200;E.P=Math.round(200*(E.forma==="corr"?3:12));E.x=+b.dataset.x;E.y=+b.dataset.y;E.z=+b.dataset.z;cambio();});
 // arrastrar el punto en la planta y moverlo con el teclado
 const svg=$("eSvg");
@@ -2984,12 +3123,78 @@ svg.addEventListener("pointerdown",ev=>{if(E.vista==="newmark"&&geoN){const pt=s
   if(!geo||E.vista!=="planta")return;const m=aMetros(ev);if(m.px>620)return;svg.setPointerCapture(ev.pointerId);
   // al arrastrar con el dedo o el mouse, el punto no se aleja más de 1 m del borde de la zapata
   const lim=(v,h)=>Math.max(-h-1,Math.min(h+1,v)),hL=E.forma==="corr"?0:Lr()/2;
-  const mover=e=>{const q=aMetros(e);E.x=Math.round(lim(q.x,E.B/2)*20)/20;if(E.forma!=="corr")E.y=Math.round(lim(q.y,hL)*20)/20;programar();};
+  const ox=offX,oy=offY;   // con excentricidad el dibujo está centrado en el área efectiva
+  const mover=e=>{const q=aMetros(e);E.x=Math.round((lim(q.x,E.B/2)+ox)*20)/20;if(E.forma!=="corr")E.y=Math.round((lim(q.y,hL)+oy)*20)/20;programar();};
   mover(ev);svg.onpointermove=mover;svg.onpointerup=()=>{svg.onpointermove=null;guardar();};});
 svg.addEventListener("keydown",e=>{const d=e.shiftKey?0.5:0.1,k={ArrowLeft:[-d,0],ArrowRight:[d,0],ArrowUp:[0,d],ArrowDown:[0,-d]}[e.key];
   if(!k)return;e.preventDefault();E.x=Math.round((E.x+k[0])*100)/100;if(E.forma!=="corr")E.y=Math.round((E.y+k[1])*100)/100;cambio();});
+window.ESFI={informe:()=>({E:JSON.parse(JSON.stringify(E)),r:ultimoR,pasos:pasos.map(p=>({t:p.t,h:p.h})),link:LINK&&{qu:LINK.R.qu,FS:LINK.FS,e:LINK.e,eB:LINK.eB,eL:LINK.eL,qtipo:E.qtipo}})};
 new MutationObserver(()=>programar()).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 aplicarModulo();
+})();
+
+/* =====================================================================
+   INFORME PDF — arma la solución completa del ejercicio que está en pantalla
+   (capacidad de carga o incremento de esfuerzos) y abre el diálogo de impresión.
+   En el celular: «Imprimir» → «Guardar como PDF» (Android) o compartir/guardar en Archivos (iPhone).
+   ===================================================================== */
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const fmt=(x,n=2)=>(x==null||!isFinite(x)?"—":(+x).toFixed(n).replace(".",","));
+const esc=t=>String(t).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const fila=(k,v)=>`<tr><th>${k}</th><td>${v}</td></tr>`;
+const sec=(t,h)=>h?`<section><h2>${t}</h2>${h}</section>`:"";
+const figura=(svgId,canvasId,usarCanvas)=>{
+  if(usarCanvas){const c=$(canvasId);try{return `<img class="fig" src="${c.toDataURL("image/png")}" alt="vista 3D">`;}catch(e){return "";}}
+  const s=$(svgId);if(!s)return "";const k=s.cloneNode(true);k.removeAttribute("style");k.setAttribute("class","fig");return k.outerHTML;};
+
+function capacidad(){
+  const d=window.MZ.informe(),S=d.S,R=d.R,LC=d.LC;if(!R)return "";
+  const cor=S.tipo==="corrida",un=cor?"kN/m":"kN",dos=S.modo==="dos";
+  const suelo=(o,n)=>`${n}: ${esc(o.nom)} · φ = ${fmt(o.phi,1)}° · c = ${fmt(o.c,1)} kPa · γ = ${fmt(o.gm,1)} / γ<sub>sat</sub> = ${fmt(o.gsat,1)} kN/m³`;
+  const datos=`<table>${fila("Zapata",`${S.tipo} · B = ${fmt(S.B)} m${S.tipo==="rectangular"?` · L = ${fmt(S.L)} m`:""} · D<sub>f</sub> = ${fmt(S.Df)} m`)}
+    ${fila("Método",S.metodo==="terzaghi"?"Terzaghi":"Vesić / EGCC")}${fila("Suelo",suelo(S.s1,dos?"Estrato 1":"Suelo")+(dos?`<br>espesor e₁ = ${fmt(S.e1)} m<br>`+suelo(S.s2,"Estrato 2"):""))}
+    ${fila("Nivel freático",S.dnf>=25?"no hay":(S.dnf<0?`lámina de ${fmt(-S.dnf)} m`:`d<sub>nf</sub> = ${fmt(S.dnf)} m`)+` · D<sub>cr</sub> opción ${S.dcrOp}`)}
+    ${fila("Carga",(S.Q>0?`P = ${fmt(S.Q,0)} ${un}`:"sin carga de servicio (se supone P = Q<sub>u</sub>/3)")+(S.theta>0?` · θ = ${fmt(S.theta,1)}°`:"")+(S.eB>0||S.eL>0?` · e<sub>B</sub> = ${fmt(S.eB,3)} m · e<sub>L</sub> = ${fmt(S.eL,3)} m`:""))}</table>`;
+  const res=`<p class="grande">q<sub>u</sub> = ${fmt(R.qu,1)} kPa</p><table>${fila("Q<sub>u</sub> = q<sub>u</sub> · A'",`${fmt(R.Qu,cor?1:0)} ${un} (A' = ${fmt(R.ef.A,3)} m²${cor?"/m":""})`)}
+    ${dos?fila("Caso (tabla del profesor)",R.caso):""}${fila("Gobierna",esc(R.gobierna))}
+    ${LC.sup?"":fila("Factor de seguridad",`FS = Q<sub>u</sub>/P = ${fmt(R.Qu/Math.max(LC.Qv,1e-9),2)}`)}</table>`;
+  const html=(id)=>{const e=$(id);return e?e.innerHTML:"";};
+  return `<h1>Capacidad de carga</h1>`+sec("Datos",datos)+sec("Resultado",res)+
+    sec("Figura",figura("sec","c3",S.dim==="3d"))+
+    (dos?sec("Suelo estratificado — caso",`<div class="matriz">${html("matriz")}</div><p>${html("porque")}</p>`):"")+
+    sec("Desarrollo",`<pre>${esc($("dev").textContent)}</pre>`)+
+    sec("Términos de la ecuación",`<div class="terms">${html("o_terms")}</div><table class="f">${html("o_fact")}</table>`)+
+    sec("Ponderados de profundidad",`<div class="pond">${html("o_pond")}</div>`)+
+    sec("Verificaciones",html("o_chk"))+sec("Flotación y volcamiento",`<div class="pond">${html("o_est")}</div>`);
+}
+
+function esfuerzos(){
+  const d=window.ESFI.informe(),E=d.E,r=d.r;if(!r)return "";
+  const forma={rect:"rectangular",cuad:"cuadrada",corr:"corrida",circ:"circular"}[E.forma];
+  const met={abaco:"ábaco (lectura de la gráfica)",tabla:"Tabla 13 / ábaco del curso",exacto:"exacto (Boussinesq)",21:"2:1",newmark:"carta de Newmark"}[E.metodo];
+  const datos=`<table>${fila("Zapata",`${forma} · B = ${fmt(E.B)} m${E.forma==="rect"?` · L = ${fmt(E.L)} m`:""}`)}
+    ${fila("Presión aplicada",`q<sub>cont</sub> = ${fmt(E.q,1)} kPa${E.modoQ==="P"?` (P = ${fmt(E.P,0)} ${E.forma==="corr"?"kN/m":"kN"})`:""}${d.link&&d.link.qtipo==="neta"?" · q neta":""}`)}
+    ${fila("Punto",`x = ${fmt(E.x)} m${E.forma==="corr"?"":` · y = ${fmt(E.y)} m`} · z = ${fmt(E.z)} m bajo el sello`)}
+    ${fila("Método",met)}${d.link?fila("Ejercicio vinculado",`q<sub>u</sub> = ${fmt(d.link.qu,1)} kPa · FS = ${fmt(d.link.FS,2)}${d.link.e?` · excentricidad e<sub>B</sub> = ${fmt(d.link.eB,2)}, e<sub>L</sub> = ${fmt(d.link.eL,2)} m (área efectiva)`:""}`):""}</table>`;
+  const pasos=`<ol class="pasos">${d.pasos.map(p=>`<li><b>${p.t}</b><br>${p.h}</li>`).join("")}</ol>`;
+  return `<h1>Incremento de esfuerzos</h1>`+sec("Datos",datos)+
+    sec("Resultado",`<p class="grande">Δσ<sub>z</sub> = ${fmt(r.valor,1)} kPa</p><p>${esc(r.origen||"")}</p><div class="ecomp">${$("eComp").innerHTML}</div>`)+
+    sec("Figura",figura("eSvg","e3c",E.vista==="3d")+(E.vista==="abaco"?$("eTabla").innerHTML:""))+
+    sec("Desarrollo paso a paso",pasos)+sec("Verificaciones",$("eChk").innerHTML);
+}
+
+function exportar(){
+  const esf=!$("mainEsf").hidden,cuerpo=esf?esfuerzos():capacidad();
+  let box=$("informe");if(!box){box=document.createElement("div");box.id="informe";document.body.appendChild(box);}
+  const f=new Date().toLocaleString("es-CO",{dateStyle:"long",timeStyle:"short"});
+  box.innerHTML=`<header><b>Mesa de cálculo — cimentaciones superficiales</b><span>Fundaciones · Universidad del Cauca · ${f}</span></header>${cuerpo}
+    <footer>Solución generada con la app «Cimentaciones» (juniorferdev.github.io/mesa-zapatas-web). Convenciones del curso del Prof. Lucio Cruz. Verifica siempre con tu desarrollo a mano.</footer>`;
+  const t=document.title;document.title=(esf?"Esfuerzos":"Capacidad de carga")+" — informe";
+  setTimeout(()=>{window.print();document.title=t;},60);
+}
+$("btnPDF").addEventListener("click",exportar);
 })();
 </script>
 </body></html>
