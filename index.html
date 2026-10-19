@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610192234";
+window.APP_VER="202610192250";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -2791,7 +2791,7 @@ const Lr=()=>E.forma==="cuad"?E.B:(E.forma==="corr"?Infinity:E.L);
 /* área que recibe P: corrida por metro (B × 1 m), circular π·B²/4 */
 const area=()=>E.forma==="corr"?E.B:(E.forma==="circ"?Math.PI*E.B*E.B/4:E.B*Lr());
 /* lo que se muestra según la forma: solo las vistas, métodos y puntos que aplican */
-const VISTAS_DE={terr:["3d","tsec","tdesc","tabaco","tisob","curva"],rect:["3d","planta","abaco","newmark","curva"],cuad:["3d","planta","abaco","isob","newmark","curva"],corr:["3d","corr","newmark","curva"],circ:["3d","circ","newmark","curva"]};
+const VISTAS_DE={terr:["tsec","3d","tdesc","tabaco","tisob","curva"],rect:["3d","planta","abaco","newmark","curva"],cuad:["3d","planta","abaco","isob","newmark","curva"],corr:["3d","corr","newmark","curva"],circ:["3d","circ","newmark","curva"]};
 const METODOS_DE={terr:["abaco","exacto"],rect:["abaco","tabla","exacto","21","newmark"],cuad:["abaco","tabla","exacto","21","newmark"],corr:["tabla","exacto","21","newmark"],circ:["tabla","exacto","newmark"]};
 
 /* ---------------- módulo activo (cabecera) ---------------- */
@@ -3152,52 +3152,64 @@ function trapecio(svg,X,Y,o){o=o||{};const g=geomT(),H=E.tH,P=[[-g.toe,0],[-g.b0
 }
 /* ---------- sección 2D con los puntos del ejercicio ---------- */
 let geoT=null;
+/* dirección de cada mitad respecto al punto: el talud cercano y la mitad cercana van hacia afuera (+d), las demás hacia el lado lejano (−d) */
+const dirParte=p=>(p.lado==="cercano"||p.lado.startsWith("talud cercano"))?1:-1;
+const SUB=["₁","₂","₃"],NUM=["①","②","③"];
 function dibujarTerrSec(r){
-  const svg=$("eSvg");svg.innerHTML="";const g=geomT(),H=E.tH,tinta=V("--tinta"),t3=V("--tinta3"),lin=V("--linea2"),falla=V("--falla");
-  const pts=E.tpts.concat([{n:"P",x:E.x,z:E.z}]),xm=Math.max(g.toe*1.2,...pts.map(p=>Math.abs(p.x)+1.2),3),zm=Math.max(...pts.map(p=>p.z),g.base*0.8,2)*1.08+0.3;
-  const W=820,Ht=560-40,s=Math.min(W/(2*xm),Ht/(zm+H*1.35)),cx=450,GY=60+H*1.35*s,X=v=>cx+v*s,Y=v=>GY-v*s,Z=v=>GY+v*s;
+  const svg=$("eSvg");svg.innerHTML="";const g=geomT(),H=E.tH,tinta=V("--tinta"),t3=V("--tinta3"),lin=V("--linea2"),falla=V("--falla"),t=r.terr;
+  const pts=E.tpts.concat([{n:"P",x:E.x,z:E.z}]),xm=Math.max(g.toe*1.25,...pts.map(p=>Math.abs(p.x)+1.2),3),zm=Math.max(...pts.map(p=>p.z),g.base*0.8,2)*1.06+0.3;
+  const W=800,arriba=40+28+t.partes.length*20,s=Math.min(W/(2*xm),(610-arriba)/(zm+H)),cx=450,GY=44+arriba+H*s,X=v=>cx+v*s,Y=v=>GY-v*s,Z=v=>GY+v*s;
   geoT={cx,GY,s};
-  txt(svg,30,24,`Terraplén — sección transversal (L → ∞ en Y) · q = γH = ${fmt(E.tg,1)} × ${fmt(H,2)} = ${fmt(g.q,1)} kPa`,{fill:tinta,fw:600,mono:false,fs:13});
+  txt(svg,30,22,`Terraplén — solución en vivo (arrastra el punto) · ${ZONA_TXT[r.lugar]}`,{fill:tinta,fw:600,mono:false,fs:13});
   // rejilla y ejes
-  const pas=bonito(xm/5),pz=bonito(zm/6);
-  for(let v=-Math.floor(xm/pas)*pas;v<=xm+1e-9;v+=pas){svg.appendChild(el("path",{d:`M${X(v)} ${GY}V${Z(zm)}`,stroke:lin,"stroke-width":.7}));txt(svg,X(v),Z(zm)+15,fmt(v,pas<1?1:0),{anchor:"middle",fill:t3,fs:10,halo:false});}
+  const pas=bonito(xm/5),pz=bonito(zm/5);
+  for(let v=-Math.floor(xm/pas)*pas;v<=xm+1e-9;v+=pas){svg.appendChild(el("path",{d:`M${X(v)} ${GY}V${Z(zm)}`,stroke:lin,"stroke-width":.7}));txt(svg,X(v),Z(zm)+14,fmt(v,pas<1?1:0),{anchor:"middle",fill:t3,fs:10,halo:false});}
   for(let v=pz;v<=zm+1e-9;v+=pz){svg.appendChild(el("path",{d:`M${X(-xm)} ${Z(v)}H${X(xm)}`,stroke:lin,"stroke-width":.7}));txt(svg,X(-xm)-6,Z(v)+4,fmt(v,pz<1?1:0),{anchor:"end",fill:t3,fs:10,halo:false});}
   svg.appendChild(el("rect",{x:X(-xm),y:GY,width:2*xm*s,height:zm*s,fill:"#D9C58E","fill-opacity":.13}));
   svg.appendChild(el("path",{d:`M${X(-xm)} ${GY}H${X(xm)}`,stroke:tinta,"stroke-width":1.8}));
-  txt(svg,X(xm)+4,Z(zm)+15,"x (m)",{fill:V("--tinta2"),mono:false,fs:11.5});txt(svg,X(-xm)-30,Z(zm/2),"z (m)",{fill:V("--tinta2"),mono:false,fs:11.5});
-  trapecio(svg,X,Y,{nucleo:true});
-  // flechas de carga q
-  for(let k=0;k<=8;k++){const u=-g.toe+2*g.toe*k/8,h=Math.abs(u)<=g.b0?H:H*(g.toe-Math.abs(u))/g.a;if(h<H*0.12)continue;
-    svg.appendChild(el("path",{d:`M${X(u)} ${Y(H)-22}V${Y(H)-6}`,stroke:falla,"stroke-width":1.2}));}
-  txt(svg,X(0),Y(H)-28,`q = γH = ${fmt(g.q,1)} kPa (peso del relleno, no presión de contacto)`,{anchor:"middle",fill:falla,fs:11.5,fw:600});
-  // cotas: corona, H, a, base, ángulo
-  const cota=(x1,y1,x2,y2,t,col,dy)=>{svg.appendChild(el("path",{d:`M${x1} ${y1}L${x2} ${y2}`,stroke:col,"stroke-width":1}));
-    [[x1,y1],[x2,y2]].forEach(([a,b])=>svg.appendChild(el("path",{d:y1===y2?`M${a} ${b-4}V${b+4}`:`M${a-4} ${b}H${a+4}`,stroke:col,"stroke-width":1})));
-    txt(svg,(x1+x2)/2,(y1+y2)/2+(dy||-5),t,{anchor:"middle",fill:col,fs:11});};
-  if(E.tc>0)cota(X(-g.b0),Y(H)-44,X(g.b0),Y(H)-44,`corona c = ${fmt(E.tc,2)} m`,tinta);
-  cota(X(g.toe)+26,Y(0),X(g.toe)+26,Y(H),"",tinta);txt(svg,X(g.toe)+32,Y(H/2)+4,`H = ${fmt(H,2)} m`,{fill:tinta,fs:11});
-  cota(X(g.b0),GY+12,X(g.toe),GY+12,"",AZ_T);cota(X(-g.toe),GY+12,X(-g.b0),GY+12,"",AZ_T);
-  txt(svg,X(g.toe)+6,GY+16,`a = tH = ${fmt(g.a,2)} m`,{fill:AZ_T,fs:10.5});
-  cota(X(-g.toe),GY+34,X(g.toe),GY+34,"",V("--tinta2"));
-  txt(svg,X(g.toe)+6,GY+38,`base = c + 2a = ${fmt(g.base,2)} m`,{fill:V("--tinta2"),fs:10.5});
-  {const R=Math.min(40,g.a*s*0.6),b=g.beta*Math.PI/180,x0=X(-g.toe),y0=Y(0);
-    svg.appendChild(el("path",{d:`M${x0+R} ${y0}A${R} ${R} 0 0 0 ${x0+R*Math.cos(b)} ${y0-R*Math.sin(b)}`,stroke:RJ_T,"stroke-width":1.6,fill:"none"}));
-    txt(svg,x0-8,y0-22,`β = ${fmt(g.beta,1)}°`,{anchor:"end",fill:RJ_T,fs:11.5,fw:600});
-    txt(svg,x0-8,y0-8,`talud ${fmt(E.tt,2)}H : 1V`,{anchor:"end",fill:RJ_T,fs:10.5});}
-  if(E.tc>0)txt(svg,X(0),Y(H)+16,"corona",{anchor:"middle",fill:tinta,fs:11,mono:false});
-  txt(svg,X(-(g.b0+g.toe)/2),Y(H*0.38),"espaldón",{anchor:"middle",fill:tinta,fs:10.5,mono:false});
-  txt(svg,X((g.b0+g.toe)/2),Y(H*0.38),"espaldón",{anchor:"middle",fill:tinta,fs:10.5,mono:false});
+  txt(svg,X(xm)+4,GY+4,"x (m)",{fill:V("--tinta2"),mono:false,fs:11});txt(svg,X(-xm)-28,Z(zm)+4,"z (m)",{fill:V("--tinta2"),mono:false,fs:11});
+  // terraplén real + mitades del punto (azul suma, rojo resta), numeradas como en el tablero
+  trapecio(svg,X,Y,{nucleo:true,op:.55});
+  const pol=poligonosMitades(t,E.x);
+  pol.filter(o=>o.s>0).concat(pol.filter(o=>o.s<0)).forEach(o=>{const col=o.s>0?AZ_T:RJ_T;
+    svg.appendChild(el("path",{d:"M"+o.p.map(([u,v])=>`${X(u).toFixed(1)} ${Y(v).toFixed(1)}`).join("L")+"Z",fill:col,"fill-opacity":o.s>0?.28:.45,stroke:col,"stroke-width":1.3,"data-foco":"p"+o.i}));
+    const c=o.p.reduce((a,q)=>[a[0]+q[0]/o.p.length,a[1]+q[1]/o.p.length],[0,0]);txt(svg,X(c[0]),Y(c[1])+5,NUM[o.i],{anchor:"middle",fill:col,fs:14,fw:700});});
+  trapecio(svg,X,Y,{fill:"none",op:0,w:2.4});
+  // cotas a y b de cada mitad, una fila por mitad (encima del terraplén)
+  const d=E.x<0?-1:1,Xp=Math.abs(E.x);
+  const cota=(x1,x2,y,lab,col)=>{if(Math.abs(x2-x1)<1e-6){svg.appendChild(el("path",{d:`M${X(x1)} ${y-4}V${y+4}`,stroke:col,"stroke-width":1.2}));return;}
+    svg.appendChild(el("path",{d:`M${X(x1)} ${y}H${X(x2)}M${X(x1)} ${y-4}V${y+4}M${X(x2)} ${y-4}V${y+4}`,stroke:col,"stroke-width":1.2}));
+    txt(svg,(X(x1)+X(x2))/2,y-4,lab,{anchor:"middle",fill:col,fs:10.5,fw:600});};
+  t.partes.forEach((p,i)=>{const col=p.s>0?AZ_T:RJ_T,dr=dirParte(p)*d,y=Y(H)-34-i*20,x0=Xp*d,x1=x0+dr*p.b,x2=x1+dr*p.a;
+    cota(x0,x1,y,`b${SUB[i]} = ${fmt(p.b,2)}`,col);cota(x1,x2,y,`a${SUB[i]} = ${fmt(p.a,2)}`,col);
+    txt(svg,Math.max(X(x0),X(x1),X(x2))+6,y+4,`${NUM[i]} ${p.s>0?"+":"−"}`,{fill:col,fs:11,fw:700});});
+  if(!t.partes.length)txt(svg,X(0),Y(H)-34,"z = 0: el punto está en la superficie",{anchor:"middle",fill:t3,fs:11,mono:false});
+  txt(svg,X(-g.toe)-8,Y(H/2)+4,`H = ${fmt(H,2)} m · β = ${fmt(g.beta,1)}°`,{anchor:"end",fill:tinta,fs:10.5});
+  txt(svg,X(-g.toe)-8,GY+16,`a = tH = ${fmt(g.a,2)} · b₀ = ${fmt(g.b0,2)} · base = ${fmt(g.base,2)} m`,{anchor:"start",fill:V("--tinta2"),fs:10});
+  // eje y vertical del punto
+  svg.appendChild(el("path",{d:`M${X(0)} ${Y(H)-6}V${Z(zm)}`,stroke:t3,"stroke-width":1,"stroke-dasharray":"8 3 2 3"}));txt(svg,X(0)+4,Z(zm)-4,"℄",{fill:t3,fs:12});
   // puntos de la tabla
-  E.tpts.forEach(p=>{const act=Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9;
-    svg.appendChild(el("circle",{cx:X(p.x),cy:Z(p.z),r:act?0:4.5,fill:tinta,stroke:V("--panel"),"stroke-width":1.5}));
-    if(!act)txt(svg,X(p.x)+7,Z(p.z)-6,`${p.n} (${fmt(p.x,1)}; ${fmt(p.z,1)})`,{fill:tinta,fs:10.5});});
+  E.tpts.forEach(p=>{const act=Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9;if(act)return;
+    svg.appendChild(el("circle",{cx:X(p.x),cy:Z(p.z),r:4,fill:tinta,stroke:V("--panel"),"stroke-width":1.5}));
+    txt(svg,X(p.x)+6,Z(p.z)-5,`${p.n} (${fmt(TERR(p.x,p.z).ds,1)} kPa)`,{fill:t3,fs:10});});
   const gP=el("g",{"data-foco":"punto",style:"cursor:grab"});
-  gP.appendChild(el("path",{d:`M${X(E.x)} ${GY}V${Z(E.z)}`,stroke:falla,"stroke-width":1.4,"stroke-dasharray":"5 4"}));
-  gP.appendChild(el("circle",{cx:X(E.x),cy:Z(E.z),r:14,fill:"transparent"}));
-  gP.appendChild(el("circle",{cx:X(E.x),cy:Z(E.z),r:6.5,fill:falla,stroke:V("--panel"),"stroke-width":2}));svg.appendChild(gP);
-  const nm=(E.tpts.find(p=>Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9)||{n:"P"}).n;
-  const der=X(E.x)>620;txt(svg,X(E.x)+(der?-10:10),Z(E.z)+18,`${nm} (${fmt(E.x,2)}; ${fmt(E.z,2)}) · Δσz = ${fmt(r.valor,1)} kPa`,{fill:falla,fw:600,fs:12,anchor:der?"end":"start"});
-  txt(svg,30,Z(zm)+38,`Punto ${ZONA_TXT[r.lugar]}. Arrastra el punto rojo o toca una fila de la tabla.`,{fill:t3,mono:false,fs:11});
+  gP.appendChild(el("path",{d:`M${X(E.x)} ${Y(H)-30}V${Z(E.z)}`,stroke:falla,"stroke-width":1.4,"stroke-dasharray":"5 4"}));
+  gP.appendChild(el("circle",{cx:X(E.x),cy:Z(E.z),r:16,fill:"transparent"}));
+  gP.appendChild(el("circle",{cx:X(E.x),cy:Z(E.z),r:7,fill:falla,stroke:V("--panel"),"stroke-width":2}));svg.appendChild(gP);
+  const nm=(E.tpts.find(p=>Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9)||{n:"P"}).n,der=X(E.x)>640;
+  txt(svg,X(E.x)+(der?-11:11),Z(E.z)+18,`${nm} (${fmt(E.x,2)}; ${fmt(E.z,2)}) → ${fmt(r.valor,2)} kPa`,{fill:falla,fw:700,fs:12,anchor:der?"end":"start"});
+  // solución escrita, como en el tablero
+  const ab=E.metodo==="abaco",Iu=p=>ab?lecturaT(p.I):p.I,dI=ab?3:4,y0=Z(zm)+38;
+  svg.appendChild(el("rect",{x:20,y:y0-18,width:860,height:20*(t.partes.length+2)+14,rx:8,fill:V("--panel"),stroke:lin}));
+  const L=[[`q = γH = ${fmt(E.tg,2)} × ${fmt(H,2)} = ${fmt(g.q,2)} kPa`,tinta,600]];
+  t.partes.forEach((p,i)=>{const sb=SUB[i];L.push([`${NUM[i]} ${p.s>0?"(+)":"(−)"}  a${sb}/z = ${fmt(p.a,2)}/${fmt(E.z,2)} = ${fmt(p.az,3)}   b${sb}/z = ${fmt(p.b,2)}/${fmt(E.z,2)} = ${fmt(p.bz,3)}   →  I${sb} = ${fmt(Iu(p),dI)}`+
+    (p.q!==g.q?(p.s>0?`   con q′ = q·a′/a = ${fmt(p.q,2)} kPa`:`   con q − q′ = ${fmt(p.q,2)} kPa`):""),p.s>0?AZ_T:RJ_T,600]);});
+  if(t.partes.length){const todasQ=t.partes.every(p=>p.q===g.q);
+    const suma=t.partes.map((p,i)=>(i?(p.s>0?" + ":" − "):(p.s>0?"":"−"))+fmt(Iu(p),dI)).join("");
+    L.push([todasQ?`Δσz = q·Σ I = ${fmt(g.q,2)} × (${suma}) = ${fmt(r.valor,2)} kPa`
+      :`Δσz = Σ qᵢ·Iᵢ = ${t.partes.map((p,i)=>(i?(p.s>0?" + ":" − "):"")+`${fmt(p.q,2)}×${fmt(Iu(p),dI)}`).join("")} = ${fmt(r.valor,2)} kPa`,falla,700]);}
+  else L.push([`Δσz = ${fmt(r.valor,2)} kPa (carga del relleno en la vertical del punto)`,falla,700]);
+  L.forEach(([tx,c,w],k)=>txt(svg,34,y0+k*20,tx,{fill:c,fw:w,fs:12.5}));
 }
 /* ---------- descomposición del punto activo (azul suma, rojo resta) ---------- */
 function dibujarTerrDesc(r){
@@ -3446,7 +3458,7 @@ function resultados(r){
 }
 
 /* ---------------- controles ---------------- */
-const VISTAS=[["3d","3D"],["planta","Planta + rectángulos"],["abaco","Ábaco I(m,n)"],["isob","Isóbaras (cuadrada)"],["corr","Zapata corrida"],["newmark","Carta de Newmark"],["curva","Δσ vs z"],["circ","Circular"],["tsec","Sección + puntos"],["tdesc","Descomposición"],["tabaco","Ábaco Fig. 12"],["tisob","Isóbaras"]];
+const VISTAS=[["3d","3D"],["planta","Planta + rectángulos"],["abaco","Ábaco I(m,n)"],["isob","Isóbaras (cuadrada)"],["corr","Zapata corrida"],["newmark","Carta de Newmark"],["curva","Δσ vs z"],["circ","Circular"],["tsec","Sección (en vivo)"],["tdesc","Descomposición"],["tabaco","Ábaco Fig. 12"],["tisob","Isóbaras"]];
 const LISTAS=new Set(VISTAS.map(v=>v[0]));            // las demás vistas llegan en los siguientes pasos
 function sinc(){
   const setN=(k,dec)=>{$("er_"+k).value=E[k];$("en_"+k).value=(+E[k]).toFixed(dec);};
@@ -3489,7 +3501,7 @@ function render(){pend=false;if(modulo!=="esf")return;
   if(E.vista==="3d"){$("eTabla").hidden=true;if(E.forma==="terr")dibujarTerr3D(r);else dibujar3D(r);resultados(r);
     const nuevos=construirPasos(r),firma=JSON.stringify(nuevos.map(p=>p.h));
     if(firma!==firmaPasos){firmaPasos=firma;pasos=nuevos;actual=0;mostrarPasos(true);jugar(true);}else mostrarPasos();return;}
-  $("eTabla").hidden=E.vista!=="abaco";
+  $("eTabla").hidden=E.vista!=="abaco";$("eSvg").setAttribute("viewBox",E.vista==="tsec"?"0 0 900 800":"0 0 900 650");
   if(E.vista==="tsec")dibujarTerrSec(r);else if(E.vista==="tdesc")dibujarTerrDesc(r);else if(E.vista==="tabaco")dibujarTerrAbaco(r);else if(E.vista==="tisob")dibujarTerrIsob(r);else
   if(E.vista==="curva"||E.vista==="circ")dibujarCurvas(r);else if(E.vista==="newmark")dibujarNewmark(r);else if(E.vista==="abaco")dibujarAbaco(r);else if(E.vista==="isob"||E.vista==="corr")dibujarIsobaras(r);else dibujarPlanta(r);resultados(r);
   const nuevos=construirPasos(r),firma=JSON.stringify(nuevos.map(p=>p.h));
