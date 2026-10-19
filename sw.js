@@ -1,6 +1,6 @@
 /* Modo sin conexión. La página va primero por la red (así cada actualización llega sola al abrir con internet)
    y, si no hay red, se usa la última copia guardada. Íconos y fuentes: copia guardada primero. */
-const VERSION="202610180457",CACHE="mesa-"+VERSION,BASE=["./","index.html","manifest.webmanifest","icono-180.png","icono-192.png","icono-512.png"];
+const VERSION="202610191406",CACHE="mesa-"+VERSION,BASE=["./","index.html","manifest.webmanifest","icono-180.png","icono-192.png","icono-512.png"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(BASE)).then(()=>self.skipWaiting()));});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener("fetch",e=>{

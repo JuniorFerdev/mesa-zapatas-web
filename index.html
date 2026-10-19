@@ -56,7 +56,7 @@ header .sp{flex:1 1 20px}
 
 .main{display:grid;grid-template-columns:clamp(282px,15vw,330px) minmax(0,1fr) clamp(312px,18vw,390px);gap:12px;align-items:start}
 @media(max-width:1300px){.main{grid-template-columns:282px minmax(0,1fr)}.der{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}}
-@media(max-width:900px){.main{grid-template-columns:1fr}.main>.centro,.main>.der{display:contents}.stage{order:-3}#cardQu{order:-2}.centro>.card:not(.stage){order:-1}}
+@media(max-width:900px){.main{grid-template-columns:1fr}.main>.centro,.main>.der{display:contents}.stage{order:-3}.main>.izq{order:-2}#cardQu{order:-1}}
 .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 
 .card{background:var(--panel);border:1px solid var(--linea);border-radius:10px;min-width:0}
