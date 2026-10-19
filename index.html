@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610192250";
+window.APP_VER="202610192252";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -3142,7 +3142,9 @@ function poligonosMitades(t,x){
   if(X<=b0){out.push({s:1,i:0,p:[[-toe,0],[-b0,H],[X,H],[X,0]]});out.push({s:1,i:1,p:[[X,0],[X,H],[b0,H],[toe,0]]});}
   else if(X<toe){const Hp=H*(toe-X)/(toe-b0);
     out.push({s:1,i:0,p:[[X,0],[X,Hp],[toe,0]]});out.push({s:1,i:1,p:[[-toe,0],[-b0,H],[X,H],[X,0]]});out.push({s:-1,i:2,p:[[b0,H],[X,H],[X,Hp]]});}
-  else{out.push({s:1,i:0,p:[[-toe,0],[-b0,H],[X,H],[X,0]]});out.push({s:-1,i:1,p:[[b0,0],[toe,H],[X,H],[X,0]]});}
+  /* fuera o en el pie: ① prolonga la corona hasta la vertical del punto; lo que se resta (②) es el relleno que NO existe,
+     entre esa prolongación y el talud real (triángulo invertido bajo la corona, como en el tablero) */
+  else{out.push({s:1,i:0,p:[[-toe,0],[-b0,H],[X,H],[X,0]]});out.push({s:-1,i:1,p:X>toe+1e-9?[[b0,H],[X,H],[X,0],[toe,0]]:[[b0,H],[X,H],[X,0]]});}
   out.forEach(o=>o.p=o.p.map(([u,v])=>[m(u),v]));return out;
 }
 function trapecio(svg,X,Y,o){o=o||{};const g=geomT(),H=E.tH,P=[[-g.toe,0],[-g.b0,H],[g.b0,H],[g.toe,0]];
