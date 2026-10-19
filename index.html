@@ -111,6 +111,16 @@ header .sp{flex:1 1 20px}
 
 /* pestañas de estrato */
 .etabs{display:flex;gap:6px;margin-bottom:10px}
+.ptsDf{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--tinta2)}
+.ptsDf input{width:58px;font:inherit;font-family:"IBM Plex Mono",monospace;padding:3px 5px;border:1px solid var(--linea2);border-radius:6px;background:var(--panel);color:var(--tinta)}
+#tablaDf{margin-top:12px;overflow-x:auto}
+#tablaDf table{border-collapse:collapse;width:100%;font-size:12.5px}
+#tablaDf th,#tablaDf td{border:1px solid var(--linea2);padding:5px 7px;text-align:right;white-space:nowrap}
+#tablaDf th{background:var(--panel2);font-weight:600;text-align:center}
+#tablaDf td.g{text-align:left;white-space:normal;color:var(--tinta2);min-width:180px}
+#tablaDf tr.act td{background:rgba(192,57,43,.08);font-weight:600}
+#tablaDf tr[data-df]{cursor:pointer}
+#tablaDf .note{margin-top:6px}
 .etab{flex:1;font:inherit;font-size:12px;border:1px solid var(--linea);background:var(--panel2);color:var(--tinta2);border-radius:7px;
   padding:6px 8px;cursor:pointer;display:flex;align-items:center;gap:7px;text-align:left}
 .etab i{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.2);flex:0 0 12px}
@@ -375,13 +385,15 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   </div></section>
 
   <section class="card" data-tog="suelo"><h2><button class="tog" aria-expanded="true">Suelo</button><span class="resumen" id="rs_suelo"></span>
-      <span class="seg" id="segModo" role="group" aria-label="Número de estratos"><button data-v="uno">un estrato</button><button data-v="dos">dos estratos</button></span></h2>
+      <span class="seg" id="segModo" role="group" aria-label="Número de estratos"><button data-v="uno">1 estrato</button><button data-v="dos">2 estratos</button><button data-v="tres">3 estratos</button></span></h2>
     <div class="body">
       <div id="bloqueE1">
         <div class="fld"><div class="lab"><span>Espesor del estrato 1, e<sub>1</sub></span><b><input type="number" id="n_e1" step="0.1"> m</b></div><input type="range" id="r_e1" min="0.2" max="15" step="0.05"></div>
+        <div class="fld" id="f_e2"><div class="lab"><span>Espesor del estrato 2, e<sub>2</sub></span><b><input type="number" id="n_e2" step="0.1"> m</b></div><input type="range" id="r_e2" min="0.2" max="15" step="0.05"></div>
         <div class="etabs" id="etabs">
           <button class="etab" data-v="1"><i id="sw1"></i><span>Estrato 1<small id="nm1"></small></span></button>
           <button class="etab" data-v="2"><i id="sw2"></i><span>Estrato 2<small id="nm2"></small></span></button>
+          <button class="etab" data-v="3" id="etab3"><i id="sw3"></i><span>Estrato 3<small id="nm3"></small></span></button>
         </div>
       </div>
       <div class="chips" id="presetSuelo"></div>
@@ -489,12 +501,14 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
       <div id="barraComp" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <div class="seg" id="segSweep" role="group" aria-label="Variable"></div>
         <div class="seg" id="segEje" role="group" aria-label="Magnitud"><button data-v="qu">presión q<sub>u</sub></button><button data-v="Qu">carga Q<sub>u</sub></button></div>
+        <div class="ptsDf" id="ptsDf"><span>puntos del parcial: D<sub>f</sub> de</span><input type="number" id="pDfa" step="0.1" min="0.1"><span>a</span><input type="number" id="pDfb" step="0.1" min="0.1"><span>cada</span><input type="number" id="pDfp" step="0.1" min="0.1"><span>m</span></div>
       </div>
       <div class="anal">
         <div><div class="ctrlz" id="ctrlZ"><span>profundidad del corte</span><input type="range" id="r_z" min="0.1" max="20" step="0.05"><b class="n" id="v_z"></b></div>
           <svg class="dib" id="graf" viewBox="0 0 720 400"></svg></div>
         <div class="lado" id="lado"></div>
       </div>
+      <div id="tablaDf"></div>
     </div>
   </section>
 </div>
@@ -689,14 +703,40 @@ function capHom(S,s){
   r.Dcr=Dcr; r.casoNF=casoNF(S.dnf,S.Df,Dcr); return r;
 }
 function perfilDe(S){
+  if(S.modo==="dos"&&S.tres&&S.s3&&S.e2>0)
+    return [Object.assign({},S.s1,{esp:S.e1}),Object.assign({},S.s2,{esp:S.e2}),Object.assign({},S.s3,{esp:Infinity})];
   return S.modo==="dos"
     ?[Object.assign({},S.s1,{esp:S.e1}),Object.assign({},S.s2,{esp:Infinity})]
     :[Object.assign({},S.s1,{esp:Infinity})];
 }
+/* tres estratos (decisión propia, declarada): la tabla del profesor combina DOS estratos.
+   Se aplica al par «estrato donde apoya la zapata / estrato siguiente»: si D_f < e₁+e₂ el par es S1–S2
+   (como siempre); si la zapata apoya en S3 (D_f ≥ e₁+e₂) el par es S2–S3 y el caso es columna III.
+   q y γ₃ se integran con el perfil COMPLETO de tres estratos. Si la zona que decide el caso
+   (D_cr, zapata imaginaria o ponderados) llega al estrato 3, se avisa: la tabla no lo cubre. */
+function sistema(S){
+  const E=perfilDe(S);
+  if(!(S.modo==="dos"&&S.tres&&E.length===3))return sistema2(S,E);
+  const e12=S.e1+S.e2;
+  if(S.Df>=e12-1e-9){
+    const R=sistema2(Object.assign({},S,{s1:S.s2,s2:S.s3,e1:e12}),E);
+    R.par=[2,3];R.e12=e12;R.avisoS3=null;
+    R.gobierna=R.gobierna.replace(/qu₂/g,"qu₃").replace("estrato 2","estrato 3").replace("D_f − e₁","D_f − (e₁ + e₂)");
+    return R;}
+  const R=sistema2(S,E);R.par=[1,2];R.e12=e12;
+  const ex=R.extra||{},z=[],f=v=>v.toFixed(2).replace(".",",");
+  if(ex.metodo==="pond")z.push([S.Df+ex.pond.Dcrp,"la zona de los parámetros ponderados (H₁ + H₂)"]);
+  else z.push([S.Df+R.Dcr,"la zona de falla (D_f + D_cr)"]);
+  if(ex.imag)z.push([S.e1+ex.imag.Dcri,"la zona crítica de la zapata imaginaria (e₁ + D_cr,i)"]);
+  const malos=z.filter(o=>o[0]>e12+1e-9);
+  R.avisoS3=malos.length?malos.map(o=>`${o[1]} llega a ${f(o[0])} m`).join(" y ")+
+    ` y entra al estrato 3 (empieza a ${f(e12)} m). La tabla del profesor solo combina dos estratos: c y φ salen del par S1–S2; γ sí incluye el estrato 3.`:null;
+  return R;
+}
 
 /* ======================= SISTEMA (tabla del profesor) ======================= */
-function sistema(S){
-  const E=perfilDe(S), qReal=sigmaEf(E,S.Df,S.dnf);
+function sistema2(S,E){
+  const qReal=sigmaEf(E,S.Df,S.dnf);
   const base={tipo:S.tipo,B:S.B,L:S.L,Df:S.Df,eB:S.eB,eL:S.eL,theta:S.theta,metodo:S.metodo};
   if(S.modo!=="dos"){
     const r=capHom(S,S.s1);
@@ -1231,7 +1271,9 @@ function crearVisor3D(cv,capa){
 
     /* suelos */
     const aS=osc?.16:.22;
-    const capas=M.dos?[[M.s1,0,-Math.min(M.e1,M.prof)],[M.s2,-Math.min(M.e1,M.prof),yb]]:[[M.s1,0,yb]];
+    const y12=M.e12&&M.s3?-Math.min(M.e12,M.prof):null;
+    const capas=M.dos?(y12!=null?[[M.s1,0,-Math.min(M.e1,M.prof)],[M.s2,-Math.min(M.e1,M.prof),y12],[M.s3,y12,yb]]
+      :[[M.s1,0,-Math.min(M.e1,M.prof)],[M.s2,-Math.min(M.e1,M.prof),yb]]):[[M.s1,0,yb]];
     /* excavación del desplante: planta de la zapata + sobreancho, desde el terreno hasta D_f */
     let H=null;const yP=-Df;
     if(M.exc){const sb=M.exc.s;
@@ -1249,7 +1291,9 @@ function crearVisor3D(cv,capa){
       etiqueta([-hx,y,-hz],`contacto e₁ = ${fmt(M.e1)} m`,"t2");}
     /* rótulos de los suelos en la arista izquierda del fondo: no tapan la zapata en la vista isométrica */
     etiqueta([-hx,-Math.min(M.dos?M.e1:M.prof,M.prof)*0.5,-hz],`<b>${M.dos?"S1":"Suelo"}</b> · ${M.s1.nom}`,"suelo");
-    if(M.dos&&M.e1<M.prof)etiqueta([-hx,(-M.e1+yb)/2,-hz],`<b>S2</b> · ${M.s2.nom}`,"suelo");
+    if(M.dos&&M.e1<M.prof)etiqueta([-hx,(-M.e1+(y12!=null?y12:yb))/2,-hz],`<b>S2</b> · ${M.s2.nom}`,"suelo");
+    if(y12!=null&&M.e12<M.prof){const l=new Lin(),y=-M.e12;l.poli([[-hx,y,-hz],[hx,y,-hz],[hx,y,zc0],[-hx,y,zc0]],true);subir(l,C.tinta,.9);
+      etiqueta([-hx,y,-hz],`contacto e₁ + e₂ = ${fmt(M.e12)} m`,"t2");etiqueta([-hx,(y+yb)/2,-hz],`<b>S3</b> · ${M.s3.nom}`,"suelo");}
     /* cuadrícula del terreno */
     {const l=new Lin(),paso=M.paso;
       for(let x=-Math.floor(hx/paso)*paso;x<=hx+1e-9;x+=paso)(H?fueraDelHueco(H,0,x,-hz,zc0):[[-hz,zc0]]).forEach(([a,b])=>l.seg([x,0,a],[x,0,b]));
@@ -1505,7 +1549,7 @@ const SUELOS={
   arcillaF:{nom:"Arcilla firme",tipo:"fino",phi:0,c:75,gm:18,gsat:19.5,col:"#8C9E83"}
 };
 const cp=o=>JSON.parse(JSON.stringify(o));
-const DEF={tipo:"cuadrada",B:2,L:2,Df:1,metodo:"vesic",dcrOp:"a",modo:"dos",e1:2.6,
+const DEF={tipo:"cuadrada",B:2,L:2,Df:1,metodo:"vesic",dcrOp:"a",modo:"dos",e1:2.6,tres:false,e2:1.5,s3:cp(SUELOS.arcillaF),pDf:{a:1,b:3,p:1},
   s1:cp(SUELOS.relleno),s2:cp(SUELOS.arcillaB),tabS:1,metII:"auto",dnf:8,Q:900,theta:0,
   modoExc:"e",eB:0,eL:0,MB:0,ML:0,capas:{bulbo:true,iso:true,cuna:true,imag:true,efec:true,excav:true},
   vista:"comp",sweep:"e1",eje:"qu",zc:null,tLosa:null,bPed:null,gc:24,dim:"3d",corte3d:false,
@@ -1513,8 +1557,8 @@ const DEF={tipo:"cuadrada",B:2,L:2,Df:1,metodo:"vesic",dcrOp:"a",modo:"dos",e1:2
 let S=cp(DEF);
 try{const g=localStorage.getItem("zap.v3");if(g)S=Object.assign(cp(DEF),JSON.parse(g));}catch(e){}
 // un estado guardado por una versión anterior no trae las capas ni los pliegues nuevos
-S.capas=Object.assign({},DEF.capas,S.capas);S.cerradas=Object.assign({},DEF.cerradas,S.cerradas);
-[S.s1,S.s2].forEach(o=>{if(o.tipo==="fino"&&o.phi>0)o.tipo="mixto";if(o.tipo==="granular"&&o.c>0)o.tipo="mixto";});
+S.capas=Object.assign({},DEF.capas,S.capas);S.pDf=Object.assign({},DEF.pDf,S.pDf);S.cerradas=Object.assign({},DEF.cerradas,S.cerradas);
+[S.s1,S.s2,S.s3].forEach(o=>{if(o.tipo==="fino"&&o.phi>0)o.tipo="mixto";if(o.tipo==="granular"&&o.c>0)o.tipo="mixto";});
 const guardar=()=>{try{localStorage.setItem("zap.v3",JSON.stringify(S));}catch(e){}};
 
 const EJ={
@@ -1550,7 +1594,25 @@ const EJ={
   v3:{t:"clase · excentricidad e_B y e_L (qu 824,7)",s:{tipo:"rectangular",B:2.5,L:3.5,Df:1,modo:"uno",dnf:30,Q:1500,theta:0,modoExc:"e",eB:0.2,eL:0.3,sweep:"eB",vista:"pres",
     s1:{nom:"Arena",tipo:"granular",phi:30,c:0,gm:18,gsat:20,col:"#D9C58E"}}},
   terz:{t:"Terzaghi vs EGCC (verificación)",s:{tipo:"cuadrada",B:2.2,L:2.2,Df:1.2,modo:"uno",metodo:"terzaghi",
-    s1:{nom:"Arcilla",tipo:"fino",phi:0,c:48,gm:17,gsat:18.5,col:"#A5B399"},dnf:30,Q:1200,theta:0,eB:0,eL:0,sweep:"Df",vista:"comp"}}
+    s1:{nom:"Arcilla",tipo:"fino",phi:0,c:48,gm:17,gsat:18.5,col:"#A5B399"},dnf:30,Q:1200,theta:0,eB:0,eL:0,sweep:"Df",vista:"comp"}},
+  /* parciales del Prof. Lucio Cruz (enunciados en docs/parciales/) */
+  p26a1:{t:"parcial 2026-I · a.1 ML sobre SC (q_u vs D_f)",s:{tipo:"cuadrada",B:1.5,L:1.5,Df:1,modo:"dos",tres:false,e1:1.5,dnf:30,Q:0,theta:0,eB:0,eL:0,metII:"auto",
+    sweep:"Df",vista:"comp",pDf:{a:1,b:3,p:1},
+    s1:{nom:"ML",tipo:"fino",phi:0,c:35,gm:15,gsat:15,col:"#C6BBA0"},s2:{nom:"SC",tipo:"granular",phi:25,c:0,gm:17,gsat:17,col:"#D9C58E"}}},
+  p26a2:{t:"parcial 2026-I · a.2 SC sobre ML (q_u vs D_f)",s:{tipo:"cuadrada",B:1.5,L:1.5,Df:1,modo:"dos",tres:false,e1:1.5,dnf:30,Q:0,theta:0,eB:0,eL:0,metII:"auto",
+    sweep:"Df",vista:"comp",pDf:{a:1,b:3,p:1},
+    s1:{nom:"SC",tipo:"granular",phi:25,c:0,gm:17,gsat:17,col:"#D9C58E"},s2:{nom:"ML",tipo:"fino",phi:0,c:35,gm:15,gsat:15,col:"#C6BBA0"}}},
+  p15:{t:"parcial 2015-II · tres estratos CL / SW / MH",s:{tipo:"cuadrada",B:3,L:3,Df:0.5,modo:"dos",tres:true,e1:2.5,e2:1.5,dnf:0,Q:800,theta:0,eB:0,eL:0,metII:"auto",
+    sweep:"Df",vista:"comp",pDf:{a:0.5,b:4.5,p:0.5},
+    s1:{nom:"CL",tipo:"fino",phi:0,c:85,gm:18,gsat:20,col:"#8C9E83"},s2:{nom:"SW",tipo:"granular",phi:28,c:0,gm:18,gsat:18,col:"#E6D8AE"},
+    s3:{nom:"MH",tipo:"fino",phi:0,c:120,gm:19,gsat:20.5,col:"#A5B399"}}},
+  p23:{t:"parcial 2023-I · corrida, tres estratos MH / SM / CL",s:{tipo:"corrida",B:3,L:3,Df:2,modo:"dos",tres:true,e1:4.5,e2:2,dnf:1.5,Q:400,theta:+(Math.atan(80/400)/RAD).toFixed(2),modoExc:"e",eB:0.125,eL:0,metII:"auto",
+    sweep:"Df",vista:"comp",pDf:{a:1,b:3,p:0.5},
+    s1:{nom:"MH",tipo:"fino",phi:0,c:65,gm:18,gsat:20,col:"#A5B399"},s2:{nom:"SM",tipo:"granular",phi:28,c:0,gm:18,gsat:18,col:"#D9C58E"},
+    s3:{nom:"CL",tipo:"fino",phi:0,c:90,gm:19,gsat:21,col:"#8C9E83"}}},
+  p22:{t:"parcial 2022-I · SM sobre ML, curva q_u vs D_f",s:{tipo:"rectangular",B:2,L:3,Df:1.5,modo:"dos",tres:false,e1:1.5,dnf:0,Q:300,theta:+(Math.atan(50/300)/RAD).toFixed(2),modoExc:"e",eB:0,eL:+(100/300).toFixed(3),metII:"auto",
+    sweep:"Df",vista:"comp",pDf:{a:0.5,b:2.5,p:0.5},
+    s1:{nom:"SM",tipo:"granular",phi:22,c:0,gm:15,gsat:20,col:"#D9C58E"},s2:{nom:"ML",tipo:"fino",phi:0,c:65,gm:20,gsat:23,col:"#C6BBA0"}}}
 };
 
 /* ===================== TEXTURAS DE SUELO ===================== */
@@ -1628,7 +1690,7 @@ function geoZap(){
   const bp=Math.min(S.bPed!=null?S.bPed:COLUMNA,S.B,S.tipo==="rectangular"?S.L:S.B);
   return {t,bp};
 }
-const act=()=>S.tabS===2&&S.modo==="dos"?S.s2:S.s1;
+const act=()=>S.modo!=="dos"?S.s1:(S.tabS===3&&S.tres?S.s3:(S.tabS===2?S.s2:S.s1));
 function normalizarEn(T){
   if(T.tipo==="cuadrada"||T.tipo==="circular")T.L=T.B;
   if(T.tipo==="corrida"||T.tipo==="circular")T.eL=0;
@@ -1642,6 +1704,8 @@ function normalizar(){
   S.eB=Math.min(Math.max(S.eB,0),S.B*0.49);
   S.eL=Math.min(Math.max(S.eL,0),S.L*0.49);
   if(S.modo!=="dos")S.tabS=1;
+  if(S.tabS===3&&!S.tres)S.tabS=1;
+  if(!(S.e2>0))S.e2=1.5;
 }
 function carga(R){
   const Ag=areaBruta(S.tipo,S.B,S.L), sup=!(S.Q>0);
@@ -1727,6 +1791,8 @@ function dibujarSeccion(R,LC){
   let prof=Math.max(Df+Dcr*1.15,Df+LC.zb10*1.08,Df+B*1.2);
   if(dos)prof=Math.max(prof,S.e1+Math.max(1,0.6*B));
   prof=Math.min(prof,Df+Math.max(Dcr,LC.zb10)*2.4+2);
+  const tres=dos&&S.tres,e12=tres?S.e1+S.e2:Infinity;
+  if(tres&&e12<prof+3)prof=Math.max(prof,e12+0.8);
   let halfW=Math.max(B/2+0.8*Dcr,LC.zb10*0.55+B/2,B*0.9,1.2);
   if(trap)halfW=Math.max(halfW,Bi/2*1.25);
   const s=Math.min((W-PL-PR)/(2*halfW),(BOT-GY)/prof);
@@ -1740,7 +1806,9 @@ function dibujarSeccion(R,LC){
   if(dos){
     const y1=Math.min(Y(S.e1),BOT);
     svg.appendChild(el("rect",{x:8,y:GY,width:W-16,height:y1-GY,fill:pat(S.s1,"tx1"),opacity:op}));
-    if(y1<BOT)svg.appendChild(el("rect",{x:8,y:y1,width:W-16,height:BOT-y1,fill:pat(S.s2,"tx2"),opacity:op}));
+    const y2=Math.min(Y(e12),BOT);
+    if(y1<BOT)svg.appendChild(el("rect",{x:8,y:y1,width:W-16,height:y2-y1,fill:pat(S.s2,"tx2"),opacity:op}));
+    if(y2<BOT)svg.appendChild(el("rect",{x:8,y:y2,width:W-16,height:BOT-y2,fill:pat(S.s3,"tx3"),opacity:op}));
   }else svg.appendChild(el("rect",{x:8,y:GY,width:W-16,height:BOT-GY,fill:pat(S.s1,"tx1"),opacity:op}));
   // --- agua ---
   if(S.dnf<0){const yw=Math.max(Y(S.dnf),22);
@@ -1806,7 +1874,7 @@ function dibujarSeccion(R,LC){
       stroke:agua2,"stroke-width":1.6,fill:agua2,"fill-opacity":.06,"stroke-dasharray":"7 4"}));
     svg.appendChild(el("path",{d:`M${X(-bi/2)} ${yc+14}L${X(bi/2)} ${yc+14}`,stroke:agua2,"stroke-width":1.1,
       "marker-start":"url(#arA)","marker-end":"url(#arA)"}));
-    txt(svg,X(0),yc+28,`${ex.metodo==="imag"?"zapata imaginaria (gobierna)":"reparto 2:1"} · Bi = B + H₁ = ${fmt(bi)} m`,{fill:agua2,anchor:"middle",halo:true,fw:600});
+    txt(svg,X(0),yc+28,`${ex.metodo==="imag"?(R.gobierna.startsWith("zapata")?"zapata imaginaria (gobierna)":"zapata imaginaria (no controla)"):"reparto 2:1"} · Bi = B + H₁ = ${fmt(bi)} m`,{fill:agua2,anchor:"middle",halo:true,fw:600});
   }
   // --- terreno ---
   svg.appendChild(el("path",{d:exc?`M8 ${GY}H${xa}M${xb} ${GY}H${W-8}`:`M8 ${GY}H${W-8}`,stroke:tinta,"stroke-width":2}));
@@ -1819,13 +1887,17 @@ function dibujarSeccion(R,LC){
     svg.appendChild(el("rect",{x:W-PR-78,y:yc-8,width:86,height:16,rx:8,fill:panel,stroke:tinta,"stroke-width":1}));
     txt(svg,W-PR-35,yc+4,"↕ contacto",{fill:tinta,anchor:"middle",fs:10.5,mono:false});
   }
+  if(tres&&Y(e12)<BOT){const yc=Y(e12);
+    svg.appendChild(el("path",{d:exc&&e12<Df?`M8 ${yc}H${xa}M${xb} ${yc}H${W-8}`:`M8 ${yc}H${W-8}`,stroke:tinta,"stroke-width":2.2}));
+    if(R.avisoS3)txt(svg,W-PR-4,yc-6,"la zona crítica entra al S3",{fill:falla,anchor:"end",fs:10.5,mono:false,halo:true,fw:600});}
   // --- rótulos de estratos ---
   const xRot=Math.max(16,X(-halfW)+16);
   const rot=(o,y,k)=>{txt(svg,xRot,y,`${k} · ${o.nom}`,{fill:tinta,mono:false,fs:12,halo:true,fw:600});
     txt(svg,xRot,y+14,`γ ${fmt(o.gm,1)}/${fmt(o.gsat,1)} · c ${fmt(o.c,0)} · φ ${fmt(o.phi,0)}°`,{fill:tinta2,fs:10.5,halo:true});};
   // con la zapata imaginaria dibujada, su cota Bi ocupa la franja justo bajo el contacto: bajar el rótulo de S2
   const dS2=trap?44:18;
-  if(dos){rot(S.s1,GY+17,"S1"); if(Y(S.e1)+dS2+16<BOT)rot(S.s2,Y(S.e1)+dS2,"S2");}
+  if(dos){rot(S.s1,GY+17,"S1"); if(Y(S.e1)+dS2+16<BOT&&Y(S.e1)+dS2+16<Y(e12))rot(S.s2,Y(S.e1)+dS2,"S2");
+    if(tres&&Y(e12)+34<BOT)rot(S.s3,Y(e12)+18,"S3");}
   else rot(S.s1,GY+17,"Suelo");
   // --- nivel freático ---
   if(S.dnf>=0&&Y(S.dnf)<BOT){const yn=Y(S.dnf);
@@ -1867,6 +1939,7 @@ function dibujarSeccion(R,LC){
     else cota(xr,Y(Df),xr,Y(Math.min(Df+Dcr,prof)),`Dcr ${fmt(Dcr)}`,falla,"arR");
   }
   if(dos&&Y(S.e1)<BOT)cota(xr+30,GY,xr+30,Y(S.e1),`e₁ ${fmt(S.e1)}`,tinta,"ar");
+  if(tres&&Y(e12)<BOT)cota(xr+30,Y(S.e1),xr+30,Y(e12),`e₂ ${fmt(S.e2)}`,tinta,"ar");
   if(S.dnf>0&&Y(S.dnf)<BOT)cota(xr+58,GY,xr+58,Y(S.dnf),`dnf ${fmt(S.dnf)}`,agua2,"arA");
   // --- insignias ---
   const badge=(x,y,t1,col)=>{const w=t1.length*7.3+18;
@@ -1937,9 +2010,10 @@ function escena3D(R,LC){
   if(dos)prof=Math.max(prof,S.e1+Math.max(1,0.6*S.B));
   if(S.dnf>0&&S.dnf<prof*1.35)prof=Math.max(prof,S.dnf+0.4);
   prof=Math.min(prof,S.Df+Math.max(Dcr,LC.zb10)*2.4+2);
+  const e12=dos&&S.tres?S.e1+S.e2:null;if(e12&&e12<prof+3)prof=Math.max(prof,e12+0.8);
   let hx=Math.max(S.B/2+0.95*Dcr,anchoBul*1.2+0.3,S.B*1.1,1.5);
   const trap=dos&&S.e1>S.Df+0.02&&(LC.zb10>S.e1-S.Df||ex.metodo==="imag"),H1=S.e1-S.Df;
-  const imag=trap?{Bi:S.B+H1,Li:cor?null:(S.tipo==="rectangular"?S.L:S.B)+H1,gobierna:ex.metodo==="imag"}:null;
+  const imag=trap?{Bi:S.B+H1,Li:cor?null:(S.tipo==="rectangular"?S.L:S.B)+H1,gobierna:ex.metodo==="imag"&&R.gobierna.startsWith("zapata")}:null;
   if(imag)hx=Math.max(hx,imag.Bi/2*1.3);
   const foco={hx,prof};                              // zona de interés: lo que encuadra la cámara
   const M0=marcoFijo(S.tipo,hx,cor?Math.max(hx*2.2,S.B*5):(circ?hx:L/2+(hx-S.B/2)),prof);
@@ -1967,7 +2041,8 @@ function escena3D(R,LC){
   const col=o=>o.col||"#D9C58E";
   return {tipo:S.tipo,B:S.B,L,Df:S.Df,t:GZ.t,bp:GZ.bp,up:Math.min(0.5,Math.max(0.15,S.Df*0.28)),
     dos,e1:S.e1,dnf:S.dnf,prof,hx,hz,foco,paso:bonito(hx/4),corte:!!S.corte3d,
-    s1:{nom:S.s1.nom,col:col(S.s1),tex:lienzoSuelo(S.s1)},s2:{nom:S.s2.nom,col:col(S.s2),tex:lienzoSuelo(S.s2)},Dcr,bulbos,imag,efec,eB:S.eB,eL:cor?0:S.eL,theta:S.theta,
+    s1:{nom:S.s1.nom,col:col(S.s1),tex:lienzoSuelo(S.s1)},s2:{nom:S.s2.nom,col:col(S.s2),tex:lienzoSuelo(S.s2)},
+    e12,s3:e12?{nom:S.s3.nom,col:col(S.s3),tex:lienzoSuelo(S.s3)}:null,Dcr,bulbos,imag,efec,eB:S.eB,eL:cor?0:S.eL,theta:S.theta,
     mec:mc,mapas,exc:S.capas.excav&&S.Df>0?{s:sobreancho(S.B)}:null,
     Ptxt:LC.sup?`P = Q<sub>u</sub>/3 ≈ ${fmt(LC.Qv,0)} kN${cor?"/m":""}`:`P = ${fmt(S.Q,0)} kN${cor?"/m":""}`,
     osc:oscuro(),fmt,col:{fondo:V("--panel2"),tinta:V("--tinta"),falla:V("--falla"),agua2:V("--agua2"),horm:V("--hormigon")}};
@@ -2008,7 +2083,11 @@ function dibujarMatriz(R){
     :`e₁ = ${fmt(S.e1)} m cae entre D<sub>f</sub> = ${fmt(S.Df)} y D<sub>f</sub> + D<sub>cr</sub> = ${fmt(S.Df+Dcr1)} m: el contacto corta la zona de falla`;
   const abT=`qu₁ = <b class="n">${fmt(R.r1.qu,1)}</b> kPa ${R.AB==="A"?">":"<"} qu₂ = <b class="n">${fmt(R.r2.qu,1)}</b> kPa → fila ${R.AB}`;
   const metT=R.extra&&R.extra.metodo?` · Método aplicado: <b>${R.extra.metodo==="imag"?"zapata imaginaria":"parámetros ponderados"}</b>.`:"";
-  $("porque").innerHTML=`<b>Caso ${R.caso}.</b> ${posT} (columna ${R.pos}). ${abT}.${metT}`;
+  const par=R.par&&R.par[0]===2;
+  const parT=par?`<b>Tres estratos — la zapata apoya en el estrato 3</b> (D<sub>f</sub> = ${fmt(S.Df)} m ≥ e₁ + e₂ = ${fmt(R.e12)} m). La tabla se aplica al par S2–S3: en la matriz «estrato 1» = S2 y «estrato 2» = S3, con e₁ + e₂ en lugar de e₁. qu(S2) = <b class="n">${fmt(R.r1.qu,1)}</b> kPa ${R.AB==="A"?">":"<"} qu(S3) = <b class="n">${fmt(R.r2.qu,1)}</b> kPa → fila ${R.AB}.`:"";
+  const avT=R.avisoS3?`<div class="chk" style="margin-top:8px"><span class="dot" style="background:var(--falla)"></span><span><b>Ojo con el estrato 3</b><em>${R.avisoS3}</em></span></div>`:
+    (S.tres&&!par?`<p class="note" style="margin-top:6px">Tres estratos: la zona que decide el caso no llega al estrato 3 (empieza a ${fmt(R.e12)} m), así que se resuelve con el par S1–S2. El estrato 3 solo cuenta para el peso si alguna zona lo alcanza.</p>`:"");
+  $("porque").innerHTML=(par?parT:`<b>Caso ${R.caso}.</b> ${posT} (columna ${R.pos}). ${abT}.${metT}`)+avT;
 }
 
 /* ===================== RESULTADOS ===================== */
@@ -2037,11 +2116,11 @@ function resultados(R,LC){
 
   /* --- ponderados de profundidad --- */
   const E=R.E, P=[];
-  const tramos=(z1,z2)=>{const out=[],cs=[z1,z2,Math.max(S.dnf,0)];if(dos)cs.push(S.e1);
+  const tramos=(z1,z2)=>{const out=[],cs=[z1,z2,Math.max(S.dnf,0)];if(dos)cs.push(S.e1);if(dos&&S.tres)cs.push(S.e1+S.e2);
     const c=cs.filter(z=>z>=z1&&z<=z2).sort((a,b)=>a-b);
     for(let i=0;i<c.length-1;i++){const a=c[i],b=c[i+1];if(b-a<1e-6)continue;const zm=(a+b)/2;
-      const lay=dos&&zm>=S.e1?S.s2:S.s1,sub=zm>=Math.max(S.dnf,0);
-      out.push({h:b-a,g:sub?lay.gsat-GW:lay.gm,n:(dos?(zm>=S.e1?"S2":"S1"):"")+(sub?" sumergido":" húmedo")});}
+      const ic=capaEn(E,zm),lay=E[ic],sub=zm>=Math.max(S.dnf,0);
+      out.push({h:b-a,g:sub?lay.gsat-GW:lay.gm,n:(dos?"S"+(ic+1):"")+(sub?" sumergido":" húmedo")});}
     return out;};
   const tq=tramos(0,S.Df);
   P.push(`<div class="t">Sobrecarga en el sello</div><div class="ec">q = Σ γ<sub>i</sub>·h<sub>i</sub> = ${tq.map(o=>`${fmt(o.g,2)}·${fmt(o.h,2)}`).join(" + ")||"0"}<br>= <b>${fmt(LC.qReal,2)} kPa</b>${S.dnf<0?"  (la lámina libre se cancela)":""}</div>`);
@@ -2089,7 +2168,9 @@ function resultados(R,LC){
   /* --- desarrollo --- */
   const L=[];
   L.push(`${S.metodo==="terzaghi"?"TERZAGHI":"VESIĆ / EGCC"} · zapata ${S.tipo} · B=${fmt(S.B)}${S.tipo==="rectangular"?" L="+fmt(S.L):""} Df=${fmt(S.Df)}`);
-  if(dos){L.push(`Estratos: S1 ${S.s1.nom} (e1=${fmt(S.e1)}) / S2 ${S.s2.nom}`);
+  if(dos){L.push(`Estratos: S1 ${S.s1.nom} (e1=${fmt(S.e1)}) / S2 ${S.s2.nom}${S.tres?` (e2=${fmt(S.e2)}) / S3 ${S.s3.nom}`:""}`);
+    if(R.par&&R.par[0]===2)L.push(`Zapata en S3 (Df ≥ e1+e2 = ${fmt(R.e12)}): par S2–S3; qu1→qu(S2), qu2→qu(S3)`);
+    if(R.avisoS3)L.push(`AVISO: ${R.avisoS3}`);
     L.push(`qu1 = ${fmt(R.r1.qu,2)}   qu2 = ${fmt(R.r2.qu,2)}   → fila ${R.AB}`);
     L.push(`Dcr = ${fmt(Dcrit(S.B,S.s1.phi,S.dcrOp),3)} (op. ${S.dcrOp})  Df+Dcr = ${fmt(S.Df+Dcrit(S.B,S.s1.phi,S.dcrOp),3)}  → columna ${R.pos}`);
     L.push(`CASO ${R.caso}: ${R.gobierna}`);}
@@ -2133,7 +2214,7 @@ function vistaEstab(R,LC){
 /* ===================== ANÁLISIS ===================== */
 const SW={
   e1:{n:"espesor e₁",lab:"Espesor del estrato 1, e₁ (m)",dos:true,min:()=>0.2,max:()=>Math.max(S.Df+Dcrit(S.B,S.s1.phi,S.dcrOp)*2,S.e1*1.6,5),set:(p,v)=>p.e1=v,cur:()=>S.e1},
-  Df:{n:"desplante D<sub>f</sub>",lab:"Desplante D_f (m)",min:()=>0.2,max:()=>Math.max(S.Df*2.4,S.modo==="dos"?S.e1*1.5:0,5),set:(p,v)=>p.Df=v,cur:()=>S.Df},
+  Df:{n:"desplante D<sub>f</sub>",lab:"Desplante D_f (m)",min:()=>Math.min(0.2,S.pDf.a),max:()=>Math.max(S.Df*2.4,S.modo==="dos"?S.e1*1.5:0,S.modo==="dos"&&S.tres?(S.e1+S.e2)*1.25:0,S.pDf.b*1.1,5),set:(p,v)=>p.Df=v,cur:()=>S.Df},
   dnf:{n:"nivel freático",lab:"Nivel freático d_nf (m)",min:()=>-2.5,max:()=>S.Df+Dcrit(S.B,S.s1.phi,S.dcrOp)*1.8+1,set:(p,v)=>p.dnf=v,cur:()=>S.dnf},
   eB:{n:"excentricidad",lab:"Excentricidad e_B (m)",min:()=>0,max:()=>S.B*0.45,set:(p,v)=>p.eB=v,cur:()=>S.eB},
   theta:{n:"inclinación θ",lab:"Inclinación θ (°)",min:()=>0,max:()=>Math.max(S.s1.phi,30),set:(p,v)=>p.theta=v,cur:()=>S.theta},
@@ -2166,6 +2247,25 @@ function ejes(svg,W,H,mL,mR,mT,mB,xlo,xhi,ylo,yhi,xl,yl,invY){
 function linea(svg,xs,ys,PX,PY,col,w,dash){let d="";xs.forEach((x,i)=>{d+=(i?"L":"M")+PX(x).toFixed(1)+" "+PY(ys[i]).toFixed(1);});
   const a={d,stroke:col,"stroke-width":w,fill:"none"};if(dash)a["stroke-dasharray"]=dash;svg.appendChild(el("path",a));}
 
+/* puntos discretos de D_f (como piden los parciales: «D_f = [1,0 m – 3,0 m; 1,0 m]») */
+function puntosDf(){
+  const a=+S.pDf.a,b=+S.pDf.b,p=+S.pDf.p,out=[];
+  if(!(a>0&&b>=a&&p>0))return out;
+  for(let i=0;i<=40;i++){const Df=Math.round((a+i*p)*1000)/1000;if(Df>b+1e-9)break;
+    const T=cp(S);T.Df=Df;normalizarEn(T);out.push({Df,r:sistema(T)});}
+  return out;
+}
+function tablaDf(pts,esQ){
+  const box=$("tablaDf");if(!box)return;
+  if(S.vista!=="comp"||S.sweep!=="Df"||!pts.length){box.innerHTML="";return;}
+  const dos=S.modo==="dos",cor=S.tipo==="corrida",un=cor?"kN/m":"kN";
+  const q12=o=>{if(!dos)return "";const sh=o.r.par&&o.r.par[0]===2;
+    return `<td>${fmt(o.r.r1.qu,1)}${sh?"<sup>S2</sup>":""}</td><td>${fmt(o.r.r2.qu,1)}${sh?"<sup>S3</sup>":""}</td>`;};
+  const filas=pts.map(o=>`<tr data-df="${o.Df}"${Math.abs(o.Df-S.Df)<1e-6?' class="act"':""}><td>${fmt(o.Df,2)}</td><td>${fmt(o.Df/S.B,2)}</td>${dos?`<td style="text-align:center">${o.r.caso}${o.r.avisoS3?" ⚠":""}</td>`:""}${q12(o)}<td><b>${fmt(o.r.qu,1)}</b></td><td>${fmt(o.r.Qu,cor?1:0)}</td><td class="g">${o.r.gobierna}</td></tr>`).join("");
+  const algunS3=pts.some(o=>o.r.avisoS3),algunPar=pts.some(o=>o.r.par&&o.r.par[0]===2);
+  box.innerHTML=`<table><thead><tr><th>D<sub>f</sub> (m)</th><th>D<sub>f</sub>/B</th>${dos?"<th>caso</th><th>qu₁ (kPa)</th><th>qu₂ (kPa)</th>":""}<th>q<sub>u</sub> (kPa)</th><th>Q<sub>u</sub> (${un})</th><th>gobierna</th></tr></thead><tbody>${filas}</tbody></table>
+    <p class="note">Cada fila recalcula el sistema completo con la tabla del profesor (toca una fila para llevar la zapata a ese D<sub>f</sub>). qu₁ y qu₂ son las capacidades de cada estrato como si fuera homogéneo: solo deciden la fila A o B.${algunPar?" <sup>S2</sup>/<sup>S3</sup>: la zapata apoya en el estrato 3 y el par es S2–S3.":""}${algunS3?" ⚠ la zona crítica entra al estrato 3 (ver el aviso del caso).":""} Ojo con el salto de Vesić en D<sub>f</sub>/B = 1 (k pasa a arctan).</p>`;
+}
 function vistaComp(R,LC){
   const svg=$("graf");svg.innerHTML="";svg.setAttribute("viewBox","0 0 720 400");
   const W=720,H=400,mL=62,mR=16,mT=26,mB=48,esQ=S.eje==="Qu";
@@ -2192,6 +2292,11 @@ function vistaComp(R,LC){
   let d=`M${PX(xs[0])} ${PY(0)}`;xs.forEach((x,i)=>d+=`L${PX(x)} ${PY(y[i])}`);d+=`L${PX(xs[N])} ${PY(0)}Z`;
   svg.appendChild(el("path",{d,fill:V("--tinta"),"fill-opacity":.07}));
   linea(svg,xs,y,PX,PY,V("--tinta"),2.6);
+  const pts=S.sweep==="Df"?puntosDf():[];
+  pts.forEach(o=>{const yv=esQ?o.r.Qu:o.r.qu;if(o.Df<lo||o.Df>hi)return;
+    svg.appendChild(el("circle",{cx:PX(o.Df),cy:PY(yv),r:4.5,fill:V("--panel"),stroke:V("--tinta"),"stroke-width":2}));
+    txt(svg,PX(o.Df)+6,PY(yv)+15,esQ?fmt(yv,0):fmt(yv,1),{fill:V("--tinta"),fs:10.5,halo:true});});
+  tablaDf(pts,esQ);
   const cv=sw.cur();
   if(cv>=lo&&cv<=hi){const r=sistema(S),yv=esQ?r.Qu:r.qu,x=PX(cv);
     svg.appendChild(el("path",{d:`M${x} ${mT}V${H-mB}`,stroke:V("--falla"),"stroke-width":1.3,"stroke-dasharray":"5 4"}));
@@ -2222,17 +2327,20 @@ function vistaEsf(R,LC){
   const svg=$("graf");svg.innerHTML="";svg.setAttribute("viewBox","0 0 720 440");
   const W=720,H=440,mL=62,mR=110,mT=18,mB=64,dos=S.modo==="dos";
   const E=R.E,Dcr=R.Dcr;
-  let zmax=Math.max(S.Df+Dcr*1.3,S.Df+LC.zb10*1.2,4);if(dos)zmax=Math.max(zmax,S.e1*1.3);
+  let zmax=Math.max(S.Df+Dcr*1.3,S.Df+LC.zb10*1.2,4);if(dos)zmax=Math.max(zmax,S.e1*1.3);if(dos&&S.tres&&S.e1+S.e2<zmax*1.6)zmax=Math.max(zmax,S.e1+S.e2+0.8);
   const N=200,zs=[],sv=[],uu=[],se=[],st=[];
   for(let i=0;i<=N;i++){const z=zmax*i/N;zs.push(z);
     const e=sigmaEf(E,z,S.dnf),u=presPoros(z,S.dnf)+(S.dnf<0&&z>=0?0:0),ds=z>S.Df?LC.qn*dsNorm(S.tipo==="circular"?0:S.eB,z-S.Df):0;
     se.push(e);uu.push(u);sv.push(e+u);st.push(e+ds);}
   const xmax=bonito(Math.max(...sv,...st)*1.05);
   const {PX,PY}=ejes(svg,W,H,mL,mR,mT,mB,0,xmax,0,zmax,"Esfuerzo vertical (kPa)","Profundidad z (m)",true);
-  if(dos){const yc=PY(Math.min(S.e1,zmax));
+  if(dos){const yc=PY(Math.min(S.e1,zmax)),e12=S.tres?S.e1+S.e2:Infinity,y12=PY(Math.min(e12,zmax));
     svg.appendChild(el("rect",{x:mL,y:mT,width:W-mR-mL,height:yc-mT,fill:S.s1.col,"fill-opacity":oscuro()?.16:.24}));
-    if(S.e1<zmax)svg.appendChild(el("rect",{x:mL,y:yc,width:W-mR-mL,height:H-mB-yc,fill:S.s2.col,"fill-opacity":oscuro()?.16:.24}));
-    txt(svg,W-mR+8,(mT+yc)/2,"S1",{fill:V("--tinta2"),fw:600});if(S.e1<zmax)txt(svg,W-mR+8,(yc+H-mB)/2,"S2",{fill:V("--tinta2"),fw:600});}
+    if(S.e1<zmax)svg.appendChild(el("rect",{x:mL,y:yc,width:W-mR-mL,height:y12-yc,fill:S.s2.col,"fill-opacity":oscuro()?.16:.24}));
+    txt(svg,W-mR+8,(mT+yc)/2,"S1",{fill:V("--tinta2"),fw:600});
+    if(S.e1<zmax)txt(svg,W-mR+8,(yc+Math.min(y12,H-mB))/2,"S2",{fill:V("--tinta2"),fw:600});
+    if(e12<zmax){svg.appendChild(el("rect",{x:mL,y:y12,width:W-mR-mL,height:H-mB-y12,fill:S.s3.col,"fill-opacity":oscuro()?.16:.24}));
+      txt(svg,W-mR+8,(y12+H-mB)/2,"S3",{fill:V("--tinta2"),fw:600});}}
   let d=`M${PX(se[0])} ${PY(zs[0])}`;for(let i=1;i<=N;i++)d+=`L${PX(se[i])} ${PY(zs[i])}`;
   for(let i=N;i>=0;i--)d+=`L${PX(st[i])} ${PY(zs[i])}`;
   svg.appendChild(el("path",{d:d+"Z",fill:V("--falla"),"fill-opacity":.18}));
@@ -2241,7 +2349,7 @@ function vistaEsf(R,LC){
   const marca=(z,c,t)=>{if(z>zmax||z<0)return;svg.appendChild(el("path",{d:`M${mL} ${PY(z)}H${W-mR}`,stroke:c,"stroke-width":1.2,"stroke-dasharray":"7 4"}));
     txt(svg,W-mR-4,PY(z)-4,t,{fill:c,anchor:"end",fs:10.5,fw:600,halo:true});};
   marca(S.Df,V("--tinta"),`sello ${fmt(S.Df)} m`);marca(S.Df+Dcr,V("--falla"),`D_f + D_cr ${fmt(S.Df+Dcr)} m`);
-  marca(S.Df+LC.zb10,V("--agua2"),`bulbo 10 % ${fmt(S.Df+LC.zb10)} m`);if(dos)marca(S.e1,V("--tinta"),`contacto ${fmt(S.e1)} m`);
+  marca(S.Df+LC.zb10,V("--agua2"),`bulbo 10 % ${fmt(S.Df+LC.zb10)} m`);if(dos)marca(S.e1,V("--tinta"),`contacto ${fmt(S.e1)} m`);if(dos&&S.tres)marca(S.e1+S.e2,V("--tinta"),`contacto S2–S3 ${fmt(S.e1+S.e2)} m`);
   let lx=mL;[["σ total",V("--tinta3"),"2 3"],["u",V("--agua2"),"5 4"],["σ' geostático",V("--tinta"),""],["σ' + Δσ de la zapata",V("--falla"),""]].forEach(l=>{
     const a={d:`M${lx} ${H-14}h18`,stroke:l[1],"stroke-width":2};if(l[2])a["stroke-dasharray"]=l[2];svg.appendChild(el("path",a));
     txt(svg,lx+23,H-10,l[0],{mono:false,fs:10.5});lx+=23+l[0].length*5.8+18;});
@@ -2335,7 +2443,7 @@ function vistaPres(R,LC){
 /* ===================== SINCRONIZACIÓN ===================== */
 function sinc(){
   const setN=(r,n,v,dcm)=>{$(r).value=v;$(n).value=(+v).toFixed(dcm);};
-  setN("r_B","n_B",S.B,2);setN("r_L","n_L",S.L,2);setN("r_Df","n_Df",S.Df,2);setN("r_e1","n_e1",S.e1,2);
+  setN("r_B","n_B",S.B,2);setN("r_L","n_L",S.L,2);setN("r_Df","n_Df",S.Df,2);setN("r_e1","n_e1",S.e1,2);setN("r_e2","n_e2",S.e2,2);
   const a=act();
   $("r_phi").disabled=a.tipo==="fino";$("r_c").disabled=a.tipo==="granular";
   $("r_phi").closest(".fld").dataset.fijo=a.tipo==="fino"?"Arcilla en condición no drenada: φ = 0 (se trabaja con c = S_u).":"";
@@ -2362,8 +2470,10 @@ function sinc(){
   const dos=S.modo==="dos";
   $("bloqueE1").style.display=dos?"":"none";$("bloqueMet").style.display=dos?"":"none";
   $("sw1").style.background=`url(${urlSuelo(S.s1)}) 0 0/40px`;$("sw2").style.background=`url(${urlSuelo(S.s2)}) 0 0/40px`;$("nm1").textContent=S.s1.nom;$("nm2").textContent=S.s2.nom;
+  $("f_e2").style.display=dos&&S.tres?"":"none";$("etab3").style.display=dos&&S.tres?"":"none";
+  $("sw3").style.background=`url(${urlSuelo(S.s3)}) 0 0/40px`;$("nm3").textContent=S.s3.nom;
   const pres=(id,k)=>document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(k))));
-  pres("segMetodo",S.metodo);pres("segModo",S.modo);pres("etabs",S.tabS);pres("segTipoS",a.tipo);pres("segMetII",S.metII);
+  pres("segMetodo",S.metodo);pres("segModo",dos&&S.tres?"tres":S.modo);pres("etabs",S.tabS);pres("segTipoS",a.tipo);pres("segMetII",S.metII);
   pres("segDcr",S.dcrOp);pres("segDim",S.dim);pres("segExc",S.modoExc);pres("segVista",S.vista);pres("segSweep",S.sweep);pres("segEje",S.eje);
   document.querySelectorAll("#tipos .tipo").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===S.tipo)));
   document.querySelectorAll("#capas .chip").forEach(b=>b.setAttribute("aria-pressed",String(!!S.capas[b.dataset.c])));
@@ -2374,7 +2484,8 @@ function sinc(){
   $("noteDcr").innerHTML=`a) ${fmt(D[0])} · b) ${fmt(D[1])} · c) ${fmt(D[2])} m (con φ del estrato de apoyo).`;
   $("noteMet").innerHTML=`Automático: si los dos estratos son granulares usa ponderados; si alguno es arcilla o c–φ, zapata imaginaria.`;
   $("segSweep").innerHTML=Object.keys(SW).filter(k=>!SW[k].dos||dos).map(k=>`<button data-v="${k}" aria-pressed="${k===S.sweep}">${SW[k].n}</button>`).join("");
-  $("barraComp").style.display=S.vista==="comp"?"flex":"none";$("ctrlZ").style.display=S.vista==="cont"?"flex":"none";
+  $("barraComp").style.display=S.vista==="comp"?"flex":"none";
+  $("ptsDf").style.display=S.sweep==="Df"?"flex":"none";$("pDfa").value=S.pDf.a;$("pDfb").value=S.pDf.b;$("pDfp").value=S.pDf.p;$("ctrlZ").style.display=S.vista==="cont"?"flex":"none";
   $("titAnal").textContent={comp:"Comportamiento",esf:"Esfuerzos con la profundidad",cont:"Cómo llega la presión al estrato inferior",pres:"Presiones de contacto bajo la zapata"}[S.vista];
 }
 
@@ -2388,6 +2499,7 @@ function render(){
   $("sec").style.display=d3?"none":"";$("pie2d").style.display=d3?"none":"";$("v3").style.display=d3?"":"none";
   if(d3)pintar3D(R,LC);else dibujarSeccion(R,LC);
   dibujarMatriz(R);resultados(R,LC);vistaEstab(R,LC);resumenes(R,LC);aplicarPliegues();marcarInactivos(R);
+  if(S.vista!=="comp")$("tablaDf").innerHTML="";
   ({comp:vistaComp,esf:vistaEsf,cont:vistaCont,pres:vistaPres})[S.vista](R,LC);
 }
 function programar(){if(!pend){pend=true;requestAnimationFrame(()=>{render();});}}
@@ -2401,17 +2513,19 @@ let rapido=false,tFino=null;
 const cambioRapido=()=>{rapido=true;programar();clearTimeout(tFino);tFino=setTimeout(()=>{rapido=false;programar();guardar();},220);};
 
 /* ===================== EVENTOS ===================== */
-[["r_B","B"],["r_L","L"],["r_Df","Df"],["r_e1","e1"],["r_dnf","dnf"],["r_th","theta"],["r_Q","Q"],["r_eB","eB"],["r_eL","eL"],["r_MB","MB"],["r_ML","ML"]]
+[["r_B","B"],["r_L","L"],["r_Df","Df"],["r_e1","e1"],["r_e2","e2"],["r_dnf","dnf"],["r_th","theta"],["r_Q","Q"],["r_eB","eB"],["r_eL","eL"],["r_MB","MB"],["r_ML","ML"]]
   .forEach(([id,k])=>$(id).addEventListener("input",e=>{S[k]=+e.target.value;if(k==="B"||k==="Df"||k==="e1")S.zc=null;cambioRapido();}));
-[["n_B","B"],["n_L","L"],["n_Df","Df"],["n_e1","e1"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{const v=+e.target.value;if(isFinite(v)&&v>0){S[k]=v;S.zc=null;cambio();}}));
+[["n_B","B"],["n_L","L"],["n_Df","Df"],["n_e1","e1"],["n_e2","e2"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{const v=+e.target.value;if(isFinite(v)&&v>0){S[k]=v;S.zc=null;cambio();}}));
 [["r_phi","phi"],["r_c","c"],["r_gm","gm"],["r_gs","gsat"]].forEach(([id,k])=>$(id).addEventListener("input",e=>{
   const o=act();o[k]=+e.target.value;if(k==="gm"&&o.gsat<o.gm)o.gsat=o.gm;if(k==="gsat"&&o.gsat<o.gm)o.gm=o.gsat;cambioRapido();}));
 $("r_z").addEventListener("input",e=>{S.zc=+e.target.value;cambioRapido();});
+[["pDfa","a"],["pDfb","b"],["pDfp","p"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{const v=+e.target.value;if(isFinite(v)&&v>0){S.pDf[k]=v;cambio();}}));
+$("tablaDf").addEventListener("click",e=>{const tr=e.target.closest("tr[data-df]");if(!tr)return;S.Df=+tr.dataset.df;S.zc=null;cambio();});
 $("r_t").addEventListener("input",e=>{S.tLosa=+e.target.value;cambioRapido();});
 $("r_bp").addEventListener("input",e=>{S.bPed=+e.target.value;cambioRapido();});
 $("r_gc").addEventListener("input",e=>{S.gc=+e.target.value;cambioRapido();});
 const seg=(id,f)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;f(b.dataset.v);cambio();});
-seg("segMetodo",v=>S.metodo=v);seg("segModo",v=>{S.modo=v;S.zc=null;});seg("etabs",v=>S.tabS=+v);
+seg("segMetodo",v=>S.metodo=v);seg("segModo",v=>{S.modo=v==="tres"?"dos":v;S.tres=v==="tres";S.zc=null;});seg("etabs",v=>S.tabS=+v);
 seg("segTipoS",v=>aplicarTipo(act(),v));seg("segMetII",v=>S.metII=v);seg("segDcr",v=>S.dcrOp=v);seg("segExc",v=>S.modoExc=v);
 seg("segVista",v=>S.vista=v);seg("segDim",v=>S.dim=v);
 $("bar3").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!visor||!visor.ok)return;
@@ -2422,7 +2536,7 @@ $("tipos").addEventListener("click",e=>{const b=e.target.closest(".tipo");if(!b)
 $("capas").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;S.capas[b.dataset.c]=!S.capas[b.dataset.c];cambio();});
 $("presetSuelo").innerHTML=Object.keys(SUELOS).map(k=>`<button class="chip" data-p="${k}"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:url(${urlSuelo(SUELOS[k])}) 0 0/36px;margin-right:5px;vertical-align:-2px"></span>${SUELOS[k].nom}</button>`).join("");
 $("presetSuelo").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;
-  const nuevo=cp(SUELOS[b.dataset.p]);if(S.tabS===2&&S.modo==="dos")S.s2=nuevo;else S.s1=nuevo;cambio();});
+  const nuevo=cp(SUELOS[b.dataset.p]);if(S.modo==="dos"&&S.tabS===3&&S.tres)S.s3=nuevo;else if(S.tabS===2&&S.modo==="dos")S.s2=nuevo;else S.s1=nuevo;cambio();});
 $("presetNF").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;
   const R=sistema(S),m={inund:-1,grade:0,base:S.Df,fuera:S.Df+R.Dcr+1};S.dnf=m[b.dataset.nf];cambio();});
 $("presetEj").innerHTML=Object.keys(EJ).map(k=>`<button class="chip" data-e="${k}">${EJ[k].t}</button>`).join("");
@@ -2438,22 +2552,24 @@ $("btnCopy").addEventListener("click",async()=>{const b=$("btnCopy");
 function inactivos(R){
   const base=sistema(S),mismo=T=>{normalizarEn(T);const r=sistema(T);return Math.abs(r.qu-base.qu)<1e-9&&Math.abs(r.Qu-base.Qu)<1e-9;};
   const prueba=f=>{const T=cp(S);f(T);return mismo(T);};
-  const a=S.tabS===2&&S.modo==="dos"?"s2":"s1",dos=S.modo==="dos",n=dos?(a==="s1"?"el estrato 1":"el estrato 2"):"el suelo";
+  const dos=S.modo==="dos",a=!dos?"s1":(S.tabS===3&&S.tres?"s3":(S.tabS===2?"s2":"s1")),n=dos?("el estrato "+a[1]):"el suelo";
   const gob1=dos&&(R.pos==="I"||R.AB==="B"&&R.pos==="II"),gob2=dos&&(R.pos==="III"||(R.extra&&R.extra.metodo==="imag"&&R.gobierna.startsWith("zapata")));
   const porque=k=>{
+    if(dos&&a==="s3")return R.par&&R.par[0]===2?`La zapata apoya en el estrato 3, pero en el caso ${R.caso} ${n} no cambia el resultado.`:"El estrato 3 solo entra por su peso si la zona de falla llega a él; su resistencia no entra en la tabla del profesor (combina dos estratos).";
     if(dos&&a==="s2"&&gob1)return `Gobierna el estrato 1 (caso ${R.caso}): ${n} solo sirve para clasificar qu₁ frente a qu₂.`;
     if(dos&&a==="s1"&&gob2&&(k==="phi"||k==="c"))return `Gobierna el estrato 2 (caso ${R.caso}): la resistencia del estrato 1 no entra; su peso sí.`;
     if(k==="gsat")return R.casoNF==="III"?"El N.F. no llega a la zona de falla (caso III): no hay suelo sumergido que cuente.":`No cambia el resultado con esta posición del agua.`;
     if(k==="gm")return "Todo el suelo que cuenta está bajo el N.F.: solo interviene γ_sat.";
-    if(k==="phi"&&((a==="s1"?S.s1:S.s2).phi===0))return "";
+    if(k==="phi"&&S[a].phi===0)return "";
     return "No cambia q_u en esta configuración.";};
   const res={};
   if(prueba(T=>{T[a].gm+=0.5;if(T[a].gsat<T[a].gm)T[a].gsat=T[a].gm;}))res.r_gm=porque("gm");
   if(prueba(T=>{T[a].gsat+=0.5;}))res.r_gs=porque("gsat");
-  const so=a==="s1"?S.s1:S.s2;
+  const so=S[a];
   if(so.tipo!=="fino"&&prueba(T=>{T[a].phi=Math.min(T[a].phi+2,45);}))res.r_phi=porque("phi");
   if(so.tipo!=="granular"&&prueba(T=>{T[a].c+=5;}))res.r_c=porque("c");
   if(dos&&prueba(T=>{T.e1+=0.2;})&&prueba(T=>{T.e1=Math.max(0.2,T.e1-0.2);}))res.r_e1=`En el caso ${R.caso} el espesor e₁ no entra en la fórmula (solo decide el caso).`;
+  if(dos&&S.tres&&prueba(T=>{T.e2+=0.2;})&&prueba(T=>{T.e2=Math.max(0.2,T.e2-0.2);}))res.r_e2=`Con estos datos el espesor e₂ no cambia q_u: el estrato 3 queda fuera de lo que decide el caso.`;
   if(["a","b","c"].every(o=>prueba(T=>{T.dcrOp=o;})))res.segDcr=R.casoNF==="III"&&!dos?"Con el agua fuera de la zona de falla, las tres D_cr dan el mismo γ₃.":"Con estos datos las tres expresiones de D_cr llevan al mismo caso y al mismo γ₃.";
   if(prueba(T=>{T.dnf+=0.3;})&&prueba(T=>{T.dnf-=0.3;}))res.r_dnf=S.dnf>=0?"El N.F. está bajo la zona de falla (caso III): equivale a no tener agua. Súbelo para que cuente.":"Lámina sobre el terreno: σ y u suben lo mismo, la capacidad no cambia (sí la flotación).";
   if(dos&&!(R.pos==="II"&&R.AB==="A"))res.bloqueMet="Solo aplica en el caso A-II (estrato débil dentro de la zona crítica).";
@@ -2516,7 +2632,9 @@ const PASOS=[
     <h4>${S.modo==="dos"?"Estrato 1 (arriba)":"El suelo"}</h4>${sueloCampos("s1")}
     ${S.modo==="dos"?`${num("e1","Espesor del estrato 1, e₁","m","Desde la superficie hasta el contacto con el estrato 2.",{step:0.1,min:0.2,max:15})}
       <div class="aOjo">Ojo: aquí e₁ es un <b>espesor</b>, no una excentricidad. Misma letra, otra cosa.</div>
-      <h4>Estrato 2 (abajo)</h4>${sueloCampos("s2")}`:""}`},
+      <h4>Estrato 2${S.tres?"":" (abajo)"}</h4>${sueloCampos("s2")}
+      <h4>¿Hay un tercer estrato debajo?</h4><div class="aOps">${opc("tres","false","No","El estrato 2 sigue hacia abajo.")}${opc("tres","true","Sí","Como en los parciales con tres suelos.")}</div>
+      ${S.tres?`${num("e2","Espesor del estrato 2, e₂","m","Del contacto S1–S2 al contacto S2–S3.",{step:0.1,min:0.2,max:15})}<h4>Estrato 3 (abajo)</h4>${sueloCampos("s3")}`:""}`:""}`},
   {t:"El agua",h:()=>{const m=aguaModo();return `<h3>¿Hay agua en el terreno?</h3><p class="expl">El agua quita peso efectivo al suelo (γ' = γ<sub>sat</sub> − γ<sub>w</sub>) y eso baja la capacidad.</p>
     <div class="aOps tres"><button class="aOp" data-agua="seco" aria-pressed="${m==="seco"}"><b>No hay</b><small>Terreno seco.</small></button>
     <button class="aOp" data-agua="nf" aria-pressed="${m==="nf"}"><b>Nivel freático</b><small>El agua está a cierta profundidad.</small></button>
@@ -2568,7 +2686,7 @@ $("aCuerpo").addEventListener("input",e=>{const i=e.target;if(i.tagName!=="INPUT
     if(i.dataset.k==="B"&&S.tipo!=="rectangular")S.L=v;S.zc=null;}
   cambio();vivo();});
 $("aCuerpo").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
-  if(b.dataset.k){setK(b.dataset.k,b.dataset.v);if(b.dataset.k==="tipo")S.zc=null;}
+  if(b.dataset.k){setK(b.dataset.k,b.dataset.v==="true"?true:b.dataset.v==="false"?false:b.dataset.v);if(b.dataset.k==="tipo")S.zc=null;}
   else if(b.dataset.suelo){const [n,k]=b.dataset.suelo.split(":");S[n]=cp(SUELOS[k]);}
   else if(b.dataset.agua){const m=b.dataset.agua;S.dnf=m==="seco"?30:(m==="inund"?-1:(S.dnf>=0&&S.dnf<25?S.dnf:+(S.Df+0.5).toFixed(2)));}
   else if(b.dataset.exc){if(b.dataset.exc==="no"){S.eB=0;S.eL=0;S.MB=0;S.ML=0;}else if(!(S.eB>0)){S.eB=+(S.B*0.1).toFixed(2);}S.modoExc="e";}
@@ -3129,7 +3247,7 @@ function capacidad(){
   const cor=S.tipo==="corrida",un=cor?"kN/m":"kN",dos=S.modo==="dos";
   const suelo=(o,n)=>`${n}: ${esc(o.nom)} · φ = ${fmt(o.phi,1)}° · c = ${fmt(o.c,1)} kPa · γ = ${fmt(o.gm,1)} / γ<sub>sat</sub> = ${fmt(o.gsat,1)} kN/m³`;
   const datos=`<table>${fila("Zapata",`${S.tipo} · B = ${fmt(S.B)} m${S.tipo==="rectangular"?` · L = ${fmt(S.L)} m`:""} · D<sub>f</sub> = ${fmt(S.Df)} m`)}
-    ${fila("Método",S.metodo==="terzaghi"?"Terzaghi":"Vesić / EGCC")}${fila("Suelo",suelo(S.s1,dos?"Estrato 1":"Suelo")+(dos?`<br>espesor e₁ = ${fmt(S.e1)} m<br>`+suelo(S.s2,"Estrato 2"):""))}
+    ${fila("Método",S.metodo==="terzaghi"?"Terzaghi":"Vesić / EGCC")}${fila("Suelo",suelo(S.s1,dos?"Estrato 1":"Suelo")+(dos?`<br>espesor e₁ = ${fmt(S.e1)} m<br>`+suelo(S.s2,"Estrato 2"):"")+(dos&&S.tres?`<br>espesor e₂ = ${fmt(S.e2)} m<br>`+suelo(S.s3,"Estrato 3"):""))}
     ${fila("Nivel freático",S.dnf>=25?"no hay":(S.dnf<0?`lámina de ${fmt(-S.dnf)} m`:`d<sub>nf</sub> = ${fmt(S.dnf)} m`)+` · D<sub>cr</sub> opción ${S.dcrOp}`)}
     ${fila("Carga",(S.Q>0?`P = ${fmt(S.Q,0)} ${un}`:"sin carga de servicio (se supone P = Q<sub>u</sub>/3)")+(S.theta>0?` · θ = ${fmt(S.theta,1)}°`:"")+(S.eB>0||S.eL>0?` · e<sub>B</sub> = ${fmt(S.eB,3)} m · e<sub>L</sub> = ${fmt(S.eL,3)} m`:""))}</table>`;
   const res=`<p class="grande">q<sub>u</sub> = ${fmt(R.qu,1)} kPa</p><table>${fila("Q<sub>u</sub> = q<sub>u</sub> · A'",`${fmt(R.Qu,cor?1:0)} ${un} (A' = ${fmt(R.ef.A,3)} m²${cor?"/m":""})`)}
@@ -3138,6 +3256,7 @@ function capacidad(){
   const html=(id)=>{const e=$(id);return e?e.innerHTML:"";};
   return `<h1>Capacidad de carga</h1>`+sec("Datos",datos)+sec("Resultado",res)+
     sec("Figura",figura("sec","c3",S.dim==="3d"))+
+    (S.vista==="comp"&&S.sweep==="Df"&&$("tablaDf").innerHTML?sec("q<sub>u</sub> en función de D<sub>f</sub>",figura("graf")+$("tablaDf").innerHTML):"")+
     (dos?sec("Suelo estratificado — caso",`<div class="matriz">${html("matriz")}</div><p>${html("porque")}</p>`):"")+
     sec("Desarrollo",`<pre>${esc($("dev").textContent)}</pre>`)+
     sec("Términos de la ecuación",`<div class="terms">${html("o_terms")}</div><table class="f">${html("o_fact")}</table>`)+
