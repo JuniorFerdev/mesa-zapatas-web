@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610200159";
+window.APP_VER="202610200250";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -2886,6 +2886,7 @@ const DEF={forma:"rect",B:3,L:4,q:200,P:2400,modoQ:"q",x:0,y:0,z:1.5,metodo:"tab
   tc:7,tH:2.5,tt:1,tg:17,tpts:PTS_CLASE};
 let E=Object.assign({},DEF);
 try{const g=localStorage.getItem("esf.v1");if(g)E=Object.assign({},DEF,JSON.parse(g));}catch(e){}
+if(E.forma==="terr"&&!E.terrAbaco)E.metodo="abaco";E.terrAbaco=true;   // desde el 20 oct 2026 el terraplén arranca con el ábaco (como en clase)
 const guardar=()=>{try{localStorage.setItem("esf.v1",JSON.stringify(E));}catch(e){}};
 const Lr=()=>E.forma==="cuad"?E.B:(E.forma==="corr"?Infinity:E.L);
 /* área que recibe P: corrida por metro (B × 1 m), circular π·B²/4 */
@@ -3574,7 +3575,7 @@ function sinc(){
   $("eLabP").textContent=cor?"Carga del muro P (por metro)":"Carga de la columna P";$("eUnP").textContent=cor?"kN/m":"kN";
   $("eNotaQ").innerHTML=conP?`q<sub>cont</sub> = P / A = ${fmt(E.P,0)} / ${fmt(area(),cor?2:3)} = <b>${fmt(E.q,1)} kPa</b>${cor?" (A = B × 1 m)":(E.forma==="circ"?" (A = π·B²/4)":"")}`:"";
   if(!VISTAS_DE[E.forma].includes(E.vista))E.vista=VISTAS_DE[E.forma][0];
-  if(!METODOS_DE[E.forma].includes(E.metodo))E.metodo=E.forma==="terr"?"exacto":"tabla";
+  if(!METODOS_DE[E.forma].includes(E.metodo))E.metodo=E.forma==="terr"?"abaco":"tabla";
   const terr=E.forma==="terr";
   $("eTerrBlk").style.display=terr?"":"none";$("eZapBlk").style.display=terr?"none":"";$("eTitZ").textContent=terr?"Terraplén":"Zapata y carga";
   ["tc","tH","tt","tg"].forEach(k=>{$("er_"+k).value=E[k];$("en_"+k).value=(+E[k]).toFixed(2);});
@@ -3619,7 +3620,7 @@ const cambio=()=>{programar();guardar();};
 ["B","L","q","P","x","y","z","tc","tH","tt","tg"].forEach(k=>{$("er_"+k).addEventListener("input",e=>{E[k]=+e.target.value;cambio();});
   $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;cambio();}});});
 const seg=(id,f)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;f(b.dataset.v);cambio();});
-seg("eForma",v=>{E.forma=v;});seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
+seg("eForma",v=>{E.forma=v;if(v==="terr")E.metodo="abaco";});seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
 /* centrar el punto bajo la carga P en cualquier forma y vista (planta, Newmark, ábacos): la vista no cambia */
 const centrar=()=>{E.x=0;E.y=0;cambio();};
 $("eCentrar").addEventListener("click",centrar);
