@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610200059";
+window.APP_VER="202610200129";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -216,6 +216,12 @@ body:not(.ayuda) .fld.inactivo{position:relative}
 .stage{padding:8px}
 .capas{display:flex;flex-wrap:wrap;gap:5px;padding:2px 2px 8px}
 svg.dib{display:block;width:100%;height:auto}
+/* al arrastrar el punto o un deslizador, Safari seleccionaba todo el texto del dibujo (resaltado con el color de acento: «pantalla verde»).
+   Los dibujos y controles no se seleccionan; tablas, desarrollo y pasos sí se pueden copiar */
+svg.dib,.stage,.v3,.tabsDatos,.modulos,.seg,.chip,.tipo,.fld .lab span,input[type=range],.barraRes{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+svg.dib text{pointer-events:none}
+.stage .ttab,.stage .etabla,.stage .ttab *,.stage .etabla *{-webkit-user-select:text;user-select:text}
+.stage ::selection,svg.dib ::selection{background:transparent}
 #sec{max-height:calc(100vh - 170px)}
 #graf{max-height:64vh}
 #sec{touch-action:none;cursor:ns-resize}
