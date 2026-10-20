@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610200049";
+window.APP_VER="202610200059";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -476,9 +476,9 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <div class="fld"><div class="lab"><span>Desplante D<sub>f</sub></span><b><input type="number" id="n_Df" step="0.1"> m</b></div><input type="range" id="r_Df" min="0.2" max="10" step="0.05"></div>
   </div></section>
 
-  <section class="card" data-tog="suelo" data-pan="suelo"><h2><button class="tog" aria-expanded="true">Suelo</button><span class="resumen" id="rs_suelo"></span>
-      <span class="seg" id="segModo" role="group" aria-label="Número de estratos"><button data-v="uno">1 estrato</button><button data-v="dos">2 estratos</button><button data-v="tres">3 estratos</button></span></h2>
+  <section class="card" data-tog="suelo" data-pan="suelo"><h2><button class="tog" aria-expanded="true">Suelo</button><span class="resumen" id="rs_suelo"></span></h2>
     <div class="body">
+      <div class="seg full" id="segModo" role="group" aria-label="Número de estratos" style="margin-bottom:10px"><button data-v="uno">1 estrato</button><button data-v="dos">2 estratos</button><button data-v="tres">3 estratos</button></div>
       <div id="bloqueE1">
         <div class="fld"><div class="lab"><span>Espesor del estrato 1, e<sub>1</sub></span><b><input type="number" id="n_e1" step="0.1"> m</b></div><input type="range" id="r_e1" min="0.2" max="15" step="0.05"></div>
         <div class="fld" id="f_e2"><div class="lab"><span>Espesor del estrato 2, e<sub>2</sub></span><b><input type="number" id="n_e2" step="0.1"> m</b></div><input type="range" id="r_e2" min="0.2" max="15" step="0.05"></div>
