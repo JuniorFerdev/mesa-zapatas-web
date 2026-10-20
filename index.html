@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610192252";
+window.APP_VER="202610200042";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -73,6 +73,8 @@ header .sp{flex:1 1 20px}
 .main{display:grid;grid-template-columns:clamp(282px,15vw,330px) minmax(0,1fr) clamp(312px,18vw,390px);gap:12px;align-items:start}
 @media(max-width:1300px){.main{grid-template-columns:282px minmax(0,1fr)}.der{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}}
 @media(max-width:900px){.main{grid-template-columns:1fr}.main>.centro,.main>.der{display:contents}.stage{order:-3}.main>.izq{order:-2}#cardQu{order:-1}}
+/* celular, incremento de esfuerzos: «Zapata y carga» (forma: terraplén, rectangular, corrida…) va primero, encima del dibujo */
+@media(max-width:900px){#mainEsf>.izq{display:contents}#mainEsf>.izq>.card{order:-2}#mainEsf>.izq>.card:first-child{order:-4}}
 .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 
 .card{background:var(--panel);border:1px solid var(--linea);border-radius:10px;min-width:0}
@@ -3149,8 +3151,6 @@ function poligonosMitades(t,x){
 }
 function trapecio(svg,X,Y,o){o=o||{};const g=geomT(),H=E.tH,P=[[-g.toe,0],[-g.b0,H],[g.b0,H],[g.toe,0]];
   svg.appendChild(el("path",{d:"M"+P.map(([u,v])=>`${X(u).toFixed(1)} ${Y(v).toFixed(1)}`).join("L")+"Z",fill:o.fill||"#D9D3AE","fill-opacity":o.op!=null?o.op:.9,stroke:o.stroke||V("--tinta"),"stroke-width":o.w||2}));
-  if(o.nucleo&&E.tc>0){const cw=Math.min(E.tc*0.3,1.6)/2,cb=cw+H*0.35;
-    svg.appendChild(el("path",{d:`M${X(-cb)} ${Y(0)}L${X(-cw)} ${Y(H)}L${X(cw)} ${Y(H)}L${X(cb)} ${Y(0)}Z`,fill:"#B09A6E","fill-opacity":.85,stroke:V("--tinta"),"stroke-width":1,"stroke-dasharray":"4 3"}));}
 }
 /* ---------- sección 2D con los puntos del ejercicio ---------- */
 let geoT=null;
@@ -3171,7 +3171,7 @@ function dibujarTerrSec(r){
   svg.appendChild(el("path",{d:`M${X(-xm)} ${GY}H${X(xm)}`,stroke:tinta,"stroke-width":1.8}));
   txt(svg,X(xm)+4,GY+4,"x (m)",{fill:V("--tinta2"),mono:false,fs:11});txt(svg,X(-xm)-28,Z(zm)+4,"z (m)",{fill:V("--tinta2"),mono:false,fs:11});
   // terraplén real + mitades del punto (azul suma, rojo resta), numeradas como en el tablero
-  trapecio(svg,X,Y,{nucleo:true,op:.55});
+  trapecio(svg,X,Y,{op:.55});
   const pol=poligonosMitades(t,E.x);
   pol.filter(o=>o.s>0).concat(pol.filter(o=>o.s<0)).forEach(o=>{const col=o.s>0?AZ_T:RJ_T;
     svg.appendChild(el("path",{d:"M"+o.p.map(([u,v])=>`${X(u).toFixed(1)} ${Y(v).toFixed(1)}`).join("L")+"Z",fill:col,"fill-opacity":o.s>0?.28:.45,stroke:col,"stroke-width":1.3,"data-foco":"p"+o.i}));
@@ -3286,33 +3286,30 @@ function dibujarTerrIsob(r){
   const xr=[-Math.max(g.base*1.5,Math.abs(E.x)+2),Math.max(g.base*1.5,Math.abs(E.x)+2)],zr=[0,Math.max(g.base*1.6,E.z*1.15)];
   const box=[70,120,760,440],X=v=>box[0]+(v-xr[0])/(xr[1]-xr[0])*box[2],sH=box[2]/(xr[1]-xr[0]),Y=v=>box[1]-v*sH;
   txt(svg,30,24,`Isóbaras Δσz/q bajo el terraplén (q = ${fmt(g.q,1)} kPa)`,{fill:tinta,fw:600,mono:false,fs:13});
-  trapecio(svg,X,Y,{nucleo:true});
+  trapecio(svg,X,Y);
   panelIsob(svg,(x,z)=>TERR(x,z).ds/g.q,box,xr,zr,[0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1],"",{x:E.x,z:E.z},null,
     {pasoX:bonito((xr[1]-xr[0])/10),pasoZ:bonito(zr[1]/8),fx:v=>fmt(v,Math.abs(v%1)>1e-9?1:0),fz:v=>fmt(v,Math.abs(v%1)>1e-9?1:0),xl:"x (m)",zl:"z (m)"});
 }
-/* ---------- 3D: prisma trapezoidal extruido en Y, núcleo, mapas de Δσ ---------- */
+/* ---------- 3D: prisma trapezoidal extruido en Y y cortado por la sección del punto (z = 0):
+   la cara de corte muestra el terraplén, el suelo y el mapa de Δσ de frente, sin nada delante ---------- */
 function dibujarTerr3D(r){
   if(!visorE)visorE=crearVisor3D($("e3c"),$("e3et"));
   if(!visorE.ok){$("e3info").textContent="Este navegador no tiene WebGL: usa las otras vistas.";return;}
-  const g=geomT(),H=E.tH,z=E.z,px=E.x,hx=Math.max(g.toe*1.5,Math.abs(px)+1.5,3),hz=Math.max(g.toe*1.1,4),zf=hz;
+  const g=geomT(),H=E.tH,z=E.z,px=E.x,hx=Math.max(g.toe*1.5,Math.abs(px)+1.5,3),hz=Math.max(g.toe*1.4,5),zf=0;
   const prof=Math.max(z*1.2,g.base*1.1,3);
-  const X={quads:[],lineas:[],cajas:[],etiquetas:[]},cor="#D9D3AE",cor2="#E6DDBF",nuc="#B09A6E",tin=V("--tinta");
+  const X={quads:[],lineas:[],cajas:[],etiquetas:[]},cor="#D9D3AE",cor2="#E6DDBF",tin=V("--tinta");
   const S=[[-g.toe,0],[-g.b0,H],[g.b0,H],[g.toe,0]],P=(u,v,w)=>[u,v,w];
   // caras: dos taludes, corona, dos extremos
   X.quads.push({p:[P(-g.toe,0,-hz),P(-g.b0,H,-hz),P(-g.b0,H,zf),P(-g.toe,0,zf)],col:cor,alfa:.92,prio:10,luz:1});
   X.quads.push({p:[P(g.toe,0,-hz),P(g.toe,0,zf),P(g.b0,H,zf),P(g.b0,H,-hz)],col:cor,alfa:.92,prio:10,luz:1});
   if(E.tc>0)X.quads.push({p:[P(-g.b0,H,-hz),P(g.b0,H,-hz),P(g.b0,H,zf),P(-g.b0,H,zf)],col:cor2,alfa:.95,prio:10,luz:1});
   [zf,-hz].forEach(w=>X.quads.push({p:S.map(([u,v])=>P(u,v,w)),col:cor,alfa:.95,prio:10,luz:1}));
-  if(E.tc>0){const cw=Math.min(E.tc*0.3,1.6)/2,cb=cw+H*0.35;
-    X.quads.push({p:[P(-cb,0,zf+0.01),P(-cw,H,zf+0.01),P(cw,H,zf+0.01),P(cb,0,zf+0.01)],col:nuc,alfa:1,prio:11,luz:1});
-    X.quads.push({p:[P(-cw,H+0.01,-hz),P(cw,H+0.01,-hz),P(cw,H+0.01,zf),P(-cw,H+0.01,zf)],col:nuc,alfa:.95,prio:11,luz:1});
-    X.etiquetas.push({pos:[0,H*0.4,zf],html:"núcleo (impermeable)",clase:"suelo"});}
   [zf,-hz].forEach(w=>X.lineas.push({pts:S.map(([u,v])=>P(u,v,w)),col:tin}));
   S.forEach(([u,v])=>X.lineas.push({pts:[P(u,v,-hz),P(u,v,zf)],col:tin,alfa:.8}));
   // mapas de Δσ: plano vertical en la cara frontal y plano horizontal a la profundidad z
   const mapas=[],na=60,nb=36,col=[],col2=[];let mx=0;
   for(let j=0;j<nb;j++)for(let i=0;i<na;i++){const x=-hx+2*hx*i/(na-1),zz=Math.max(prof*j/(nb-1),1e-3);col.push(...rampa(TERR(x,zz).ds/g.q));}
-  mapas.push({na,nb,col,pt:(i,j)=>[-hx+2*hx*i/(na-1),-prof*j/(nb-1),zf-0.02]});
+  mapas.push({na,nb,col,pt:(i,j)=>[-hx+2*hx*i/(na-1),-prof*j/(nb-1),zf+0.01]});
   for(let j=0;j<2;j++)for(let i=0;i<na;i++){const x=-hx+2*hx*i/(na-1),v=TERR(x,Math.max(z,1e-3)).ds/g.q;mx=Math.max(mx,v);col2.push(...rampa(v));}
   mapas.push({na,nb:2,col:col2,pt:(i,j)=>[-hx+2*hx*i/(na-1),-z,-hz+(zf+hz)*j]});
   // punto P, su vertical, ejes y rótulos
@@ -3326,9 +3323,10 @@ function dibujarTerr3D(r){
   if(E.tc>0)X.etiquetas.push({pos:[0,H,-hz*0.5],html:`corona c = ${fmt(E.tc,2)} m`,clase:"cota"});
   X.etiquetas.push({pos:[-(g.b0+g.toe)/2,H/2,-hz*0.3],html:"espaldón",clase:"suelo"});X.etiquetas.push({pos:[(g.b0+g.toe)/2,H/2,-hz*0.3],html:"espaldón",clase:"suelo"});
   X.etiquetas.push({pos:[-g.toe,0,zf],html:`β = ${fmt(g.beta,1)}° (talud ${fmt(E.tt,2)}H:1V)`,clase:"falla"});
-  X.etiquetas.push({pos:[0,0,zf+0.3],html:`base = ${fmt(g.base,2)} m`,clase:"cota"});
+  X.etiquetas.push({pos:[0,0,zf],html:`base = ${fmt(g.base,2)} m`,clase:"cota"});
+  X.etiquetas.push({pos:[-hx,-prof,zf],html:"corte por el punto: Δσ<sub>z</sub> en la sección",clase:"bulbo"});
   X.etiquetas.push({pos:[hx,-z,-hz],html:`plano a z = ${fmt(z,2)} m · máx ${fmt(mx*g.q,1)} kPa`,clase:"bulbo"});
-  const M={tipo:"terraplen",sinZapata:true,B:g.base,L:null,Df:0,t:0,bp:0,up:0,dos:false,e1:0,dnf:99,sinAgua:true,prof,hx,hz,foco:{hx,prof:prof*0.8},paso:bonito(hx/4),corte:false,
+  const M={tipo:"terraplen",sinZapata:true,B:g.base,L:null,Df:0,t:0,bp:0,up:0,dos:false,e1:0,dnf:99,sinAgua:true,prof,hx,hz,foco:{hx,prof:prof*0.8},paso:bonito(hx/4),corte:true,
     s1:{nom:"Suelo de fundación (semiespacio elástico)",col:"#D9C58E"},s2:{nom:"",col:"#D9C58E"},Dcr:0,bulbos:[],mapas,imag:null,efec:null,mec:null,exc:null,
     eB:0,eL:0,theta:0,Ptxt:"",osc:false,fmt,extra:X,col:{fondo:V("--panel2"),tinta:V("--tinta"),falla:V("--falla"),agua2:V("--agua2"),horm:V("--hormigon")}};
   visorE.escena(M);
