@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610200129";
+window.APP_VER="202610200156";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -3162,11 +3162,10 @@ function dibujarCurvas(r){
     txt(svg,700,90,"σz = p·[1 − (1/(1+(r/z)²))^1,5]",{fill:tinta,fs:11});txt(svg,700,108,"bajo el centro; fuera del eje,",{fill:V("--tinta2"),mono:false,fs:11});
     txt(svg,700,124,"integración exacta",{fill:V("--tinta2"),mono:false,fs:11});
     return;}
-  if(E.forma==="terr"){const g=geomT(),zmax=Math.max(g.base*2,E.z*1.4,...E.tpts.map(p=>p.z*1.1)),ex=[];
+  if(E.forma==="terr"){const g=geomT(),zmax=Math.max(g.base*2,E.z*1.4),ex=[];
     for(let i=0;i<=120;i++){const z=Math.max(zmax*i/120,1e-3);ex.push([TERR(E.x,z).ds,z]);}
     txt(svg,30,24,`Δσz contra la profundidad bajo x = ${fmt(E.x,2)} m · q = γH = ${fmt(g.q,1)} kPa`,{fill:tinta,fw:600,mono:false,fs:13});
     const marcas=[{x:r.valor,y:E.z,col:falla,t:`z = ${fmt(E.z)} m → ${fmt(r.valor,1)} kPa`}];
-    E.tpts.filter(p=>Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)>1e-9).forEach(p=>marcas.push({x:TERR(p.x,p.z).ds,y:p.z,col:medio,r:4,t:`${p.n}: ${fmt(TERR(p.x,p.z).ds,1)}`}));
     grafica(svg,[110,70,560,480],[0,g.q*1.05],[0,zmax],"Δσz (kPa)","z (m)",[{p:ex,col:tinta}],marcas);
     svg.appendChild(el("path",{d:"M700 100h28",stroke:tinta,"stroke-width":2.4}));txt(svg,736,104,"exacto (Osterberg)",{fill:V("--tinta2"),mono:false,fs:11.5,halo:false});
     return;}
@@ -3235,6 +3234,8 @@ function bonito(v){if(!(v>0))return 1;const e=Math.pow(10,Math.floor(Math.log10(
    ===================================================================== */
 const AZ_T="#2E86C1",RJ_T="#B03A2E";
 const geomT=()=>{const q=E.tg*E.tH,a=E.tt*E.tH,b0=E.tc/2;return {q,a,b0,toe:b0+a,base:E.tc+2*a,beta:Math.atan2(1,E.tt)*180/Math.PI};};
+/* topes del punto en el terraplén: hasta 5 m más allá del pie a cada lado y una profundidad fija ligada a la base */
+const limXT=()=>{const g=geomT();return g.toe+5;},limZT=()=>{const g=geomT();return Math.max(Math.ceil(g.base*1.25),6);};
 const ZONA_TXT={corona:"bajo la corona",borde:"bajo el borde de la corona",talud:"bajo el talud",pie:"en el pie del talud",fuera:"fuera del terraplén"};
 /* polígonos (en x, altura) de cada mitad, para la figura de descomposición; d = lado del punto (+1 derecha) */
 function poligonosMitades(t,x){
@@ -3257,8 +3258,9 @@ const dirParte=p=>(p.lado==="cercano"||p.lado.startsWith("talud cercano"))?1:-1;
 const SUB=["₁","₂","₃"],NUM=["①","②","③"];
 function dibujarTerrSec(r){
   const svg=$("eSvg");svg.innerHTML="";const g=geomT(),H=E.tH,tinta=V("--tinta"),t3=V("--tinta3"),lin=V("--linea2"),falla=V("--falla"),t=r.terr;
-  const pts=E.tpts.concat([{n:"P",x:E.x,z:E.z}]),xm=Math.max(g.toe*1.25,...pts.map(p=>Math.abs(p.x)+1.2),3),zm=Math.max(...pts.map(p=>p.z),g.base*0.8,2)*1.06+0.3;
-  const W=800,arriba=40+28+t.partes.length*20,s=Math.min(W/(2*xm),(610-arriba)/(zm+H)),cx=450,GY=44+arriba+H*s,X=v=>cx+v*s,Y=v=>GY-v*s,Z=v=>GY+v*s;
+  /* marco FIJO (solo depende de la geometría): así el dibujo no cambia de escala mientras se arrastra el punto */
+  const xm=Math.max(limXT()+0.6,Math.abs(E.x)+0.6),zm=Math.max(limZT(),E.z*1.04);
+  const W=800,arriba=40+28+3*20,s=Math.min(W/(2*xm),(610-arriba)/(zm+H)),cx=450,GY=44+arriba+H*s,X=v=>cx+v*s,Y=v=>GY-v*s,Z=v=>GY+v*s;
   geoT={cx,GY,s};
   txt(svg,30,22,`Terraplén — solución en vivo (arrastra el punto) · ${ZONA_TXT[r.lugar]}`,{fill:tinta,fw:600,mono:false,fs:13});
   // rejilla y ejes
@@ -3288,15 +3290,11 @@ function dibujarTerrSec(r){
   txt(svg,X(-g.toe)-8,GY+16,`a = tH = ${fmt(g.a,2)} · b₀ = ${fmt(g.b0,2)} · base = ${fmt(g.base,2)} m`,{anchor:"start",fill:V("--tinta2"),fs:10});
   // eje y vertical del punto
   svg.appendChild(el("path",{d:`M${X(0)} ${Y(H)-6}V${Z(zm)}`,stroke:t3,"stroke-width":1,"stroke-dasharray":"8 3 2 3"}));txt(svg,X(0)+4,Z(zm)-4,"℄",{fill:t3,fs:12});
-  // puntos de la tabla
-  E.tpts.forEach(p=>{const act=Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9;if(act)return;
-    svg.appendChild(el("circle",{cx:X(p.x),cy:Z(p.z),r:4,fill:tinta,stroke:V("--panel"),"stroke-width":1.5}));
-    txt(svg,X(p.x)+6,Z(p.z)-5,`${p.n} (${fmt(TERR(p.x,p.z).ds,1)} kPa)`,{fill:t3,fs:10});});
   const gP=el("g",{"data-foco":"punto",style:"cursor:grab"});
   gP.appendChild(el("path",{d:`M${X(E.x)} ${Y(H)-30}V${Z(E.z)}`,stroke:falla,"stroke-width":1.4,"stroke-dasharray":"5 4"}));
   gP.appendChild(el("circle",{cx:X(E.x),cy:Z(E.z),r:16,fill:"transparent"}));
   gP.appendChild(el("circle",{cx:X(E.x),cy:Z(E.z),r:7,fill:falla,stroke:V("--panel"),"stroke-width":2}));svg.appendChild(gP);
-  const nm=(E.tpts.find(p=>Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9)||{n:"P"}).n,der=X(E.x)>640;
+  const nm="P",der=X(E.x)>640;
   txt(svg,X(E.x)+(der?-11:11),Z(E.z)+18,`${nm} (${fmt(E.x,2)}; ${fmt(E.z,2)}) → ${fmt(r.valor,2)} kPa`,{fill:falla,fw:700,fs:12,anchor:der?"end":"start"});
   // solución escrita, como en el tablero
   const ab=E.metodo==="abaco",Iu=p=>ab?lecturaT(p.I):p.I,dI=ab?3:4,y0=Z(zm)+38;
@@ -3432,7 +3430,7 @@ function dibujarTerr3D(r){
 }
 /* ---------- tabla de puntos (columnas de la clase) ---------- */
 function filasTerr(paraInforme){
-  const ab=E.metodo==="abaco",dI=ab?3:4,pts=E.tpts.slice(),enTabla=pts.some(p=>Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9);
+  const ab=E.metodo==="abaco",dI=ab?3:4,pts=[],enTabla=pts.some(p=>Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9);
   if(!enTabla)pts.push({n:"P",x:E.x,z:E.z,nuevo:true});
   return pts.map((p,k)=>{const t=TERR(p.x,p.z),act=Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9,Iu=q=>ab?lecturaT(q.I):q.I;
     const ds=t.partes.length?t.partes.reduce((S,q)=>S+q.s*q.q*Iu(q),0):t.ds,SI=ds/t.q;
@@ -3591,7 +3589,7 @@ function sinc(){
   $("eVistas").innerHTML=VISTAS.filter(([k])=>VISTAS_DE[E.forma].includes(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("");
   $("eLabZ").textContent=E.forma==="terr"?"Profundidad z (bajo la base del terraplén)":"Profundidad z (bajo el sello)";
   $("eMetNota").textContent=E.forma==="terr"?(E.metodo==="abaco"?"Lectura en el ábaco Fig. 12 (Budhu) a media división: I ± 0,005.":"Fórmula de Osterberg: el ábaco sin error de lectura (lo que da la tabla de la clase)."):{abaco:"Se corta la Fig. 4 a ojo: I con la precisión de la gráfica (media división = 0,005).",tabla:E.forma==="corr"?"Lectura del ábaco del curso (puntos del tablero).":"Valores de la Tabla 13; si m o n caen entre filas o columnas, interpolación bilineal.",exacto:"Fórmula exacta de Boussinesq (chequeo).",21:"Reparto 2V:1H: aproximado, solo bajo el centro.",newmark:"Conteo de elementos en la carta: Δσ = q·Vi·N."}[E.metodo];
-  $("eAtajos").parentElement.querySelector(".sub").style.display=$("eAtajos").style.display=(E.forma==="rect"||E.forma==="corr"||terr)?"":"none";
+  $("eAtajos").parentElement.querySelector(".sub").style.display=$("eAtajos").style.display=(E.forma==="rect"||E.forma==="corr")?"":"none";
   $("eAtajos").innerHTML=terr?E.tpts.map((p,k)=>`<button class="chip" data-tp="${k}" aria-pressed="${Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9}">${p.n} (${fmt(p.x,1)}; ${fmt(p.z,1)})</button>`).join(""):(E.forma==="corr"?[["0; 0,5",0,1.5],["0; 1",0,3],["0; 2",0,6],["0; 3",0,9],["0,33; 1",1,3],["0,5; 1",1.5,3],["1; 1",3,3]].map(([n,x,z])=>`<button class="chip" data-x="${x}" data-y="0" data-z="${z}" title="x/B; z/B">${n}</button>`)
     :[["a",0,0,0],["b",0,0,1.5],["c",0,0,3],["d",0,0,6],["f",1.5,0,3],["g",3,0,3],["h",1.5,2,3]].map(([n,x,y,z])=>`<button class="chip" data-x="${x}" data-y="${y}" data-z="${z}">${n} (${fmt(x,1)}; ${fmt(y,1)}; z ${fmt(z,1)})</button>`)).join("");
 }
@@ -3602,7 +3600,7 @@ function render(){pend=false;if(modulo!=="esf")return;
   if(E.modoQ==="P")E.q=E.P/area();sinc();
   const r=calcular();ultimoR=r;
   $("e3").hidden=E.vista!=="3d";$("eSvg").style.display=E.vista==="3d"?"none":"";
-  const tt=$("eTerrTabla");tt.hidden=E.forma!=="terr";if(E.forma==="terr")tt.innerHTML=tablaTerr(false);
+  const tt=$("eTerrTabla");tt.hidden=true;tt.innerHTML="";
   if(E.vista==="3d"){$("eTabla").hidden=true;if(E.forma==="terr")dibujarTerr3D(r);else dibujar3D(r);resultados(r);
     const nuevos=construirPasos(r),firma=JSON.stringify(nuevos.map(p=>p.h));
     if(firma!==firmaPasos){firmaPasos=firma;pasos=nuevos;actual=0;mostrarPasos(true);jugar(true);}else mostrarPasos();return;}
@@ -3640,7 +3638,7 @@ svg.addEventListener("pointerdown",ev=>{if(E.vista==="newmark"&&geoN){const pt=s
     svg.onpointerup=()=>{svg.onpointermove=null;guardar();};return;}
   if(E.forma==="terr"&&E.vista==="tsec"&&geoT){const pt=svg.createSVGPoint();svg.setPointerCapture(ev.pointerId);
     const mover=e=>{pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
-      E.x=Math.round((p.x-geoT.cx)/geoT.s*20)/20;E.z=Math.max(0,Math.round((p.y-geoT.GY)/geoT.s*20)/20);programar();};
+      const lx=limXT(),lz=limZT();E.x=Math.max(-lx,Math.min(lx,Math.round((p.x-geoT.cx)/geoT.s*20)/20));E.z=Math.max(0,Math.min(lz,Math.round((p.y-geoT.GY)/geoT.s*20)/20));programar();};
     mover(ev);svg.onpointermove=mover;svg.onpointerup=()=>{svg.onpointermove=null;guardar();};return;}
   if(!geo||E.vista!=="planta")return;const m=aMetros(ev);if(m.px>620)return;svg.setPointerCapture(ev.pointerId);
   // al arrastrar con el dedo o el mouse, el punto no se aleja más de 1 m del borde de la zapata
