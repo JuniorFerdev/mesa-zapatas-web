@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610200042";
+window.APP_VER="202610200049";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -72,9 +72,64 @@ header .sp{flex:1 1 20px}
 
 .main{display:grid;grid-template-columns:clamp(282px,15vw,330px) minmax(0,1fr) clamp(312px,18vw,390px);gap:12px;align-items:start}
 @media(max-width:1300px){.main{grid-template-columns:282px minmax(0,1fr)}.der{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}}
-@media(max-width:900px){.main{grid-template-columns:1fr}.main>.centro,.main>.der{display:contents}.stage{order:-3}.main>.izq{order:-2}#cardQu{order:-1}}
+@media(max-width:900px){.main{grid-template-columns:1fr}.main>.centro,.main>.der{display:contents}.main>.izq{order:-4}.stage{order:-3}#cardQu{order:-2}}
 /* celular, incremento de esfuerzos: «Zapata y carga» (forma: terraplén, rectangular, corrida…) va primero, encima del dibujo */
-@media(max-width:900px){#mainEsf>.izq{display:contents}#mainEsf>.izq>.card{order:-2}#mainEsf>.izq>.card:first-child{order:-4}}
+/* ===== rediseño (20 oct 2026): tres módulos, datos en pestañas, explicaciones a pedido ===== */
+:root{--papel:#ECEAE3;--linea:#D9D5C8;--sombra:0 1px 2px rgba(31,58,95,.06),0 4px 14px rgba(31,58,95,.05)}
+.card{border-color:var(--linea2);border-radius:14px;box-shadow:var(--sombra)}
+.card>h2{font-size:12.5px;padding:11px 14px 10px}
+header{gap:10px 16px;margin-bottom:14px}
+header .marca h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
+header .marca p{font-size:12px}
+header .acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.modulos{padding:4px;border-radius:12px;gap:4px;background:var(--panel2);border-color:var(--linea2)}
+.modulos button{display:flex;align-items:center;gap:9px;padding:7px 14px 7px 10px;border-radius:9px;text-align:left;font-size:13.5px}
+.modulos button i{font-style:normal;font-size:18px;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--panel);color:var(--tinta2);flex:0 0 auto}
+.modulos button[aria-pressed="true"] i{background:var(--tinta);color:var(--panel)}
+.modulos button span{display:flex;flex-direction:column;line-height:1.2}
+.modulos button small{font-weight:400;font-size:11px;color:var(--tinta3)}
+.modulos button[data-v="asen"] small{color:var(--medio)}
+.tabsDatos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--panel2);border:1px solid var(--linea2);border-radius:14px 14px 0 0;overflow:hidden;margin-bottom:-12px;position:relative;z-index:1}
+.tabsDatos button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--tinta2);padding:9px 4px 7px;cursor:pointer;border-bottom:2.5px solid transparent;min-width:0}
+.tabsDatos button small{display:none;font-weight:400;font-size:10.5px;color:var(--tinta3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.tabsDatos button small sub{vertical-align:baseline;font-size:inherit}
+.tabsDatos button[aria-selected="true"]{background:var(--panel);color:var(--tinta);border-bottom-color:var(--agua2)}
+.tabsDatos button:focus-visible{outline:2px solid var(--agua2);outline-offset:-2px}
+.card[data-pan]{border-radius:0 0 14px 14px}
+.card[data-pan]>h2{display:none}
+.card[data-pan][hidden]{display:none!important}
+.card[data-pan].cerrada>:not(h2){display:block!important}
+body:not(.ayuda) .note:not([id]){display:none}
+body:not(.ayuda) .fld[data-fijo]::after{display:none}
+body:not(.ayuda) .fld.inactivo::after,body:not(.ayuda) .nota-inactiva{display:none}
+body:not(.ayuda) .fld.inactivo{position:relative}
+#btnAyuda[aria-pressed="true"]{background:var(--tinta);color:var(--panel);border-color:var(--tinta)}
+.main.solo{grid-template-columns:minmax(0,640px);justify-content:center}
+.proximo .body{text-align:center;padding:48px 28px}
+.proximo .ico{font-size:40px;width:76px;height:76px;margin:0 auto 10px;border-radius:20px;display:grid;place-items:center;background:var(--panel2);color:var(--medio)}
+.proximo h2{border:0;font-size:20px;color:var(--tinta);padding:0;margin:0 0 8px;display:block}
+.proximo p{color:var(--tinta2);max-width:460px;margin:0 auto 8px}
+.barraRes{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;align-items:baseline;justify-content:center;gap:10px;
+  font:600 15px var(--fs);color:var(--panel);background:var(--tinta);border:0;border-radius:14px;padding:11px 14px;box-shadow:0 8px 24px rgba(31,58,95,.28);cursor:pointer}
+.barraRes b{font-family:var(--fm);font-size:18px}.barraRes small{font-weight:400;opacity:.8;font-size:12px}
+.barraRes[hidden]{display:none}
+@media(min-width:901px){.barraRes{display:none!important}}
+@media(max-width:900px){
+  .wrap{padding-bottom:84px}
+  header .marca p{display:none}
+  .modulos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+  .modulos button{flex-direction:column;gap:4px;padding:8px 4px;text-align:center;font-size:12px}
+  .modulos button span{align-items:center}
+  .modulos button small{display:none}
+  header .acciones{width:100%;margin-left:0}
+  header .acciones{display:flex;flex-wrap:nowrap;justify-content:flex-end;gap:6px}
+  header .acciones .btnPri{flex:1}
+  header .acciones .btnPri,header .acciones .btn2{white-space:nowrap;font-size:12.5px;padding:8px 10px}
+  header .acciones .txt{display:none}
+  header .marca h1{font-size:18px}
+  .tabsDatos button{padding:11px 2px 9px}
+  .seg button{padding:7px 10px}
+}
 .col{display:flex;flex-direction:column;gap:12px;min-width:0}
 
 .card{background:var(--panel);border:1px solid var(--linea);border-radius:10px;min-width:0}
@@ -375,22 +430,26 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   <button class="btnmini" id="avisoIOSx" aria-label="Cerrar aviso">entendido</button>
 </div>
 <header>
-  <div>
-    <h1>Mesa de cálculo — cimentaciones superficiales</h1>
-    <p>Capacidad de carga · nivel freático · excentricidad en B y L · suelos estratificados — convenciones del curso de Fundaciones</p>
+  <div class="marca">
+    <h1>Cimentaciones</h1>
+    <p>Fundaciones · Universidad del Cauca · convenciones del Prof. Lucio Cruz</p>
   </div>
-  <div class="seg modulos" id="segModulo" role="tablist" aria-label="Módulo">
-    <button data-v="cap" role="tab">Capacidad de carga</button><button data-v="esf" role="tab">Incremento de esfuerzos</button>
+  <nav class="seg modulos" id="segModulo" role="tablist" aria-label="Módulo">
+    <button data-v="cap" role="tab"><i>▦</i><span>Capacidad de carga<small>zapatas · estratos · agua</small></span></button>
+    <button data-v="esf" role="tab"><i>◭</i><span>Esfuerzos y terraplenes<small>Δσ bajo zapatas y rellenos</small></span></button>
+    <button data-v="asen" role="tab"><i>⇣</i><span>Asentamientos<small>próximamente</small></span></button>
+  </nav>
+  <div class="acciones">
+    <button class="btnPri" id="btnAsist" title="Te guía pregunta por pregunta">Guía paso a paso</button>
+    <div class="seg" id="segMetodo" role="group" aria-label="Método de cálculo">
+      <button data-v="vesic">Vesić</button><button data-v="terzaghi">Terzaghi</button>
+    </div>
+    <button class="btn2" id="btnAyuda" aria-pressed="false" title="Mostrar u ocultar las explicaciones cortas">ⓘ<span class="txt"> Explicaciones</span></button>
+    <button class="btn2" id="btnPDF" title="Solución completa del ejercicio en pantalla">PDF</button>
   </div>
-  <button class="btn2" id="btnPDF" title="Solución completa del ejercicio en pantalla">📄 Exportar PDF</button>
-  <div class="sp"></div>
-  <button class="btnPri" id="btnAsist">Nuevo ejercicio paso a paso</button>
-  <div class="seg" id="segMetodo" role="group" aria-label="Método de cálculo">
-    <button data-v="vesic">Vesić / EGCC</button><button data-v="terzaghi">Terzaghi</button>
-  </div>
-
 </header>
 
+<button class="barraRes" id="barraRes" hidden aria-label="Ir al resultado"></button>
 <div class="asist" id="asist" hidden role="dialog" aria-label="Nuevo ejercicio paso a paso">
   <div class="asist-cab"><b>Nuevo ejercicio</b><span id="aPaso"></span><button class="btnmini" id="aCerrar">cerrar</button></div>
   <ol class="asist-migas" id="aMigas"></ol>
@@ -399,10 +458,13 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   <div class="asist-pie"><button class="btn2" id="aAtras">Anterior</button><button class="btnPri" id="aSig">Siguiente</button></div>
 </div>
 
-<div class="main">
+<div class="main" id="mainCap">
 <!-- ================= IZQUIERDA ================= -->
 <div class="col izq">
-  <section class="card" data-tog="zapata"><h2><button class="tog" aria-expanded="true">Zapata</button><span class="resumen" id="rs_zapata"></span></h2><div class="body">
+  <nav class="tabsDatos" id="tabsCap" role="tablist" aria-label="Datos del ejercicio">
+    <button data-t="zapata" role="tab">Zapata<small id="ts_zapata"></small></button><button data-t="suelo" role="tab">Suelo<small id="ts_suelo"></small></button><button data-t="agua" role="tab">Agua<small id="ts_agua"></small></button><button data-t="carga" role="tab">Carga<small id="ts_carga"></small></button><button data-t="ejercicios" role="tab">Ejemplos<small id="ts_ejercicios"></small></button>
+  </nav>
+  <section class="card" data-tog="zapata" data-pan="zapata"><h2><button class="tog" aria-expanded="true">Zapata</button><span class="resumen" id="rs_zapata"></span></h2><div class="body">
     <div class="tipos" id="tipos" role="group" aria-label="Tipo de zapata">
       <button class="tipo" data-v="corrida"><svg viewBox="0 0 34 22"><rect x="2" y="9" width="30" height="7" fill="currentColor" opacity=".25" stroke="currentColor"/></svg>corrida</button>
       <button class="tipo" data-v="cuadrada"><svg viewBox="0 0 34 22"><rect x="9" y="3" width="16" height="16" fill="currentColor" opacity=".25" stroke="currentColor"/></svg>cuadrada</button>
@@ -414,7 +476,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <div class="fld"><div class="lab"><span>Desplante D<sub>f</sub></span><b><input type="number" id="n_Df" step="0.1"> m</b></div><input type="range" id="r_Df" min="0.2" max="10" step="0.05"></div>
   </div></section>
 
-  <section class="card" data-tog="suelo"><h2><button class="tog" aria-expanded="true">Suelo</button><span class="resumen" id="rs_suelo"></span>
+  <section class="card" data-tog="suelo" data-pan="suelo"><h2><button class="tog" aria-expanded="true">Suelo</button><span class="resumen" id="rs_suelo"></span>
       <span class="seg" id="segModo" role="group" aria-label="Número de estratos"><button data-v="uno">1 estrato</button><button data-v="dos">2 estratos</button><button data-v="tres">3 estratos</button></span></h2>
     <div class="body">
       <div id="bloqueE1">
@@ -447,7 +509,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
       <p class="note">Pesos unitarios en kN/m³ · γ<sub>w</sub> = 9,81</p>
     </div></section>
 
-  <section class="card" data-tog="agua"><h2><button class="tog" aria-expanded="true">Nivel freático</button><span class="resumen" id="rs_agua"></span></h2><div class="body">
+  <section class="card" data-tog="agua" data-pan="agua"><h2><button class="tog" aria-expanded="true">Nivel freático</button><span class="resumen" id="rs_agua"></span></h2><div class="body">
     <div class="fld"><div class="lab"><span>Profundidad d<sub>nf</sub></span><b><span id="v_dnf"></span> m</b></div><input type="range" id="r_dnf" min="-3" max="25" step="0.05"></div>
     <div class="chips" id="presetNF">
       <button class="chip" data-nf="inund">inundado</button><button class="chip" data-nf="grade">en el terreno</button>
@@ -460,7 +522,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <p class="note" id="noteDcr"></p>
   </div></section>
 
-  <section class="card" data-tog="carga"><h2><button class="tog" aria-expanded="true">Carga</button><span class="resumen" id="rs_carga"></span></h2><div class="body">
+  <section class="card" data-tog="carga" data-pan="carga"><h2><button class="tog" aria-expanded="true">Carga</button><span class="resumen" id="rs_carga"></span></h2><div class="body">
     <div class="fld"><div class="lab"><span id="labQ">Carga de servicio P</span><b><span id="v_Q"></span></b></div><input type="range" id="r_Q" min="0" max="40000" step="10"></div>
     <div class="fld"><div class="lab"><span>Inclinación θ</span><b><span id="v_th"></span>°</b></div><input type="range" id="r_th" min="0" max="45" step="0.5"></div>
     <div class="sep"></div>
@@ -478,7 +540,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <p class="note" id="noteExc"></p>
   </div></section>
 
-  <section class="card" data-tog="ejercicios"><h2><button class="tog" aria-expanded="true">Ejercicios guardados</button><span class="resumen" id="rs_ejercicios"></span></h2><div class="body">
+  <section class="card" data-tog="ejercicios" data-pan="ejercicios"><h2><button class="tog" aria-expanded="true">Ejercicios guardados</button><span class="resumen" id="rs_ejercicios"></span></h2><div class="body">
     <div class="chips" id="presetEj" style="margin:0"></div>
   </div></section>
 </div>
@@ -569,9 +631,20 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 </div>
 
 <!-- ================= MÓDULO: INCREMENTO DE ESFUERZOS ================= -->
+<div class="main solo" id="mainAsen" hidden>
+  <section class="card proximo"><div class="body">
+    <div class="ico">⇣</div>
+    <h2>Asentamientos</h2>
+    <p>Este módulo está en construcción. Aquí irán el <b>asentamiento elástico</b> (E<sub>s</sub>, μ, factores de influencia) y el <b>asentamiento por consolidación</b> (C<sub>c</sub>, C<sub>s</sub>, e₀, OCR), con las tablas y correlaciones de la guía del curso.</p>
+    <p class="note">Mientras tanto usa <b>Capacidad de carga</b> o <b>Esfuerzos y terraplenes</b> (arriba).</p>
+  </div></section>
+</div>
 <div class="main" id="mainEsf" hidden>
 <div class="col izq">
-  <section class="card"><h2 id="eTitZ">Zapata y carga</h2><div class="body">
+  <nav class="tabsDatos" id="tabsEsf" role="tablist" aria-label="Datos del ejercicio">
+    <button data-t="forma" role="tab"><span id="eTabForma">Zapata</span><small id="ets_forma"></small></button><button data-t="punto" role="tab">Punto<small id="ets_punto"></small></button><button data-t="metodo" role="tab">Método<small id="ets_metodo"></small></button>
+  </nav>
+  <section class="card" data-pan="forma"><h2 id="eTitZ">Zapata y carga</h2><div class="body">
     <div class="seg full" id="eForma" role="group" aria-label="Forma" style="margin-bottom:10px">
       <button data-v="rect">rectangular</button><button data-v="cuad">cuadrada</button><button data-v="corr">corrida</button><button data-v="circ">circular</button><button data-v="terr">terraplén</button>
     </div>
@@ -595,7 +668,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <p class="note">q<sub>cont</sub> es la presión que transmite la zapata (carga ÷ área), <b>no</b> la capacidad última q<sub>u</sub>.</p>
     </div>
   </div></section>
-  <section class="card"><h2>Punto de interés</h2><div class="body">
+  <section class="card" data-pan="punto"><h2>Punto de interés</h2><div class="body">
     <div class="fld" id="ef_x"><div class="lab"><span id="eLabX">x (desde el centro, en dirección de B)</span><b><input type="number" id="en_x" step="0.1"> m</b></div><input type="range" id="er_x" min="-10" max="10" step="0.05"></div>
     <div class="fld" id="ef_y"><div class="lab"><span>y (desde el centro, en dirección de L)</span><b><input type="number" id="en_y" step="0.1"> m</b></div><input type="range" id="er_y" min="-10" max="10" step="0.05"></div>
     <div class="fld"><div class="lab"><span id="eLabZ">Profundidad z (bajo el sello)</span><b><input type="number" id="en_z" step="0.1"> m</b></div><input type="range" id="er_z" min="0" max="20" step="0.05"></div>
@@ -603,7 +676,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <p class="sub" style="margin:8px 0 4px" id="eSubAt">Puntos del tablero</p>
     <div class="chips" id="eAtajos" style="margin:0"></div>
   </div></section>
-  <section class="card"><h2>Método</h2><div class="body">
+  <section class="card" data-pan="metodo"><h2>Método</h2><div class="body">
     <div class="seg full" id="eMetodo" role="group" aria-label="Método">
       <button data-v="abaco">ábaco (gráfica)</button><button data-v="tabla">Tabla 13</button><button data-v="exacto">exacto</button><button data-v="21">2:1</button><button data-v="newmark">Newmark</button>
     </div>
@@ -645,6 +718,21 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 </div>
 </div>
 </div>
+<script>
+/* pestañas de datos (capacidad y esfuerzos) + botón de explicaciones; el estado se recuerda en este dispositivo */
+(function(){
+  const get=(k,d)=>{try{return localStorage.getItem(k)||d;}catch(e){return d;}},put=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
+  function tabs(nav,clave,def){const col=nav.parentElement;
+    const poner=t=>{nav.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.t===t)));
+      col.querySelectorAll(":scope>[data-pan]").forEach(c=>c.hidden=c.dataset.pan!==t);put(clave,t);};
+    nav.addEventListener("click",e=>{const b=e.target.closest("button");if(b)poner(b.dataset.t);});
+    poner(get(clave,def));}
+  tabs(document.getElementById("tabsCap"),"tabCap.v1","zapata");
+  tabs(document.getElementById("tabsEsf"),"tabEsf.v1","forma");
+  const ay=document.getElementById("btnAyuda"),pon=v=>{document.body.classList.toggle("ayuda",v);ay.setAttribute("aria-pressed",String(v));put("ayuda.v1",v?"1":"0");};
+  ay.addEventListener("click",()=>pon(!document.body.classList.contains("ayuda")));pon(get("ayuda.v1","0")==="1");
+})();
+</script>
 <script>
 /* =====================================================================
    NÚCLEO DE CÁLCULO — cimentaciones superficiales (convención del curso)
@@ -1614,13 +1702,13 @@ const SUELOS={
 const cp=o=>JSON.parse(JSON.stringify(o));
 const DEF={tipo:"cuadrada",B:2,L:2,Df:1,metodo:"vesic",dcrOp:"a",modo:"dos",e1:2.6,tres:false,e2:1.5,s3:cp(SUELOS.arcillaF),pDf:{a:1,b:3,p:1},
   s1:cp(SUELOS.relleno),s2:cp(SUELOS.arcillaB),tabS:1,metII:"auto",dnf:8,Q:900,theta:0,
-  modoExc:"e",eB:0,eL:0,MB:0,ML:0,capas:{bulbo:true,iso:true,cuna:true,imag:true,efec:true,excav:true},
+  modoExc:"e",eB:0,eL:0,MB:0,ML:0,capas:{bulbo:true,iso:false,cuna:false,imag:true,efec:true,excav:false},capasV:2,
   vista:"comp",sweep:"e1",eje:"qu",zc:null,tLosa:null,bPed:null,gc:24,dim:"3d",corte3d:false,
   cerradas:{ejercicios:true,pond:true,verif:true,estab:true,dev:true}};
 let S=cp(DEF);
 try{const g=localStorage.getItem("zap.v3");if(g)S=Object.assign(cp(DEF),JSON.parse(g));}catch(e){}
 // un estado guardado por una versión anterior no trae las capas ni los pliegues nuevos
-S.capas=Object.assign({},DEF.capas,S.capas);S.pDf=Object.assign({},DEF.pDf,S.pDf);S.cerradas=Object.assign({},DEF.cerradas,S.cerradas);
+S.capas=S.capasV===2?Object.assign({},DEF.capas,S.capas):Object.assign({},DEF.capas);S.capasV=2;S.pDf=Object.assign({},DEF.pDf,S.pDf);S.cerradas=Object.assign({},DEF.cerradas,S.cerradas);
 [S.s1,S.s2,S.s3].forEach(o=>{if(o.tipo==="fino"&&o.phi>0)o.tipo="mixto";if(o.tipo==="granular"&&o.c>0)o.tipo="mixto";});
 const guardar=()=>{try{localStorage.setItem("zap.v3",JSON.stringify(S));}catch(e){}};
 
@@ -2650,14 +2738,14 @@ function marcarInactivos(R){
 }
 
 /* ===================== TARJETAS PLEGABLES ===================== */
-function aplicarPliegues(){document.querySelectorAll(".card[data-tog]").forEach(c=>{const x=!!S.cerradas[c.dataset.tog];
+function aplicarPliegues(){document.querySelectorAll(".card[data-tog]:not([data-pan])").forEach(c=>{const x=!!S.cerradas[c.dataset.tog];
   c.classList.toggle("cerrada",x);c.querySelector(".tog").setAttribute("aria-expanded",String(!x));});}
 document.querySelectorAll(".card[data-tog]>h2").forEach(h=>h.addEventListener("click",e=>{
   if(e.target.closest(".seg,input,select,.btnmini"))return;          // los controles del encabezado no pliegan
   const id=h.parentElement.dataset.tog;S.cerradas[id]=!S.cerradas[id];aplicarPliegues();guardar();programar();}));
 /* lo esencial de cada tarjeta, visible en su encabezado cuando está plegada */
 function resumenes(R,LC){
-  const rs=(id,h)=>{const e=$("rs_"+id);if(e)e.innerHTML=h;},cor=S.tipo==="corrida";
+  const rs=(id,h)=>{const e=$("rs_"+id);if(e)e.innerHTML=h;const t=$("ts_"+id);if(t)t.innerHTML=h;},cor=S.tipo==="corrida";
   rs("zapata",`${S.tipo} · B ${fmt(S.B)}${S.tipo==="rectangular"?` × L ${fmt(S.L)}`:""} · D<sub>f</sub> ${fmt(S.Df)} m`);
   rs("suelo",S.modo==="dos"?`${S.s1.nom} / ${S.s2.nom} · e₁ ${fmt(S.e1)} m`:`${S.s1.nom} · φ ${fmt(S.s1.phi,1)}° · c ${fmt(S.s1.c,0)}`);
   rs("agua",(S.dnf>=25?"sin agua":S.dnf<0?`lámina ${fmt(-S.dnf)} m`:`d<sub>nf</sub> ${fmt(S.dnf)} m`)+` · caso ${R.casoNF}`);
@@ -2665,6 +2753,7 @@ function resumenes(R,LC){
   rs("ejercicios",`${Object.keys(EJ).length} ejercicios`);
   rs("matriz",S.modo==="dos"?`caso ${R.caso}`:"");
   rs("qu",`q<sub>u</sub> ${fmt(R.qu,1)} kPa · Q<sub>u</sub> ${fmt(R.Qu,cor?1:0)} kN${cor?"/m":""}`);
+  const br=$("barraRes");if(br&&!$("mainCap").hidden){br.hidden=false;br.innerHTML=`qᵤ <b>${fmt(R.qu,1)}</b> kPa <small>· Q<sub>u</sub> ${fmt(R.Qu,cor?1:0)} kN${cor?"/m":""}${S.modo==="dos"?" · caso "+R.caso:""}</small>`;br.onclick=()=>$("cardQu").scrollIntoView({behavior:"smooth",block:"start"});}
 }
 
 /* ===================== ASISTENTE PASO A PASO ===================== */
@@ -2799,9 +2888,12 @@ const METODOS_DE={terr:["abaco","exacto"],rect:["abaco","tabla","exacto","21","n
 /* ---------------- módulo activo (cabecera) ---------------- */
 let modulo="cap";try{modulo=localStorage.getItem("modulo.v1")||"cap";}catch(e){}
 function aplicarModulo(){
+  if(!["cap","esf","asen"].includes(modulo))modulo="cap";
   const esf=modulo==="esf";
-  document.querySelector(".wrap>.main:not(#mainEsf)").hidden=esf;$("mainEsf").hidden=!esf;
-  ["btnAsist","segMetodo"].forEach(id=>{const x=$(id);if(x)x.style.display=esf?"none":"";});
+  $("mainCap").hidden=modulo!=="cap";$("mainEsf").hidden=!esf;$("mainAsen").hidden=modulo!=="asen";
+  ["btnAsist","segMetodo"].forEach(id=>{const x=$(id);if(x)x.style.display=modulo==="cap"?"":"none";});
+  $("btnPDF").style.display=modulo==="asen"?"none":"";$("barraRes").hidden=modulo==="asen";
+  if(modulo==="cap")window.dispatchEvent(new Event("resize"));
   document.querySelectorAll("#segModulo button").forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.v===modulo));b.setAttribute("aria-selected",String(b.dataset.v===modulo));});
   if(esf)programar();
 }
@@ -3431,6 +3523,13 @@ $("eRep").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)
 /* ---------------- resultados y verificaciones ---------------- */
 function resultados(r){
   $("eRes").textContent=fmt(r.valor,1);
+  {const br=$("barraRes");if(br&&modulo==="esf"){br.hidden=false;br.innerHTML=`Δσz <b>${fmt(r.valor,1)}</b> kPa <small>· (${fmt(E.x,2)}; ${E.forma==="terr"||E.forma==="corr"?"":fmt(E.y,2)+"; "}${fmt(E.z,2)}) m</small>`;
+    br.onclick=()=>$("eRes").scrollIntoView({behavior:"smooth",block:"center"});}
+   const nf={rect:"rectangular",cuad:"cuadrada",corr:"corrida",circ:"circular",terr:"terraplén"}[E.forma];
+   $("ets_forma").textContent=E.forma==="terr"?`terraplén · H ${fmt(E.tH,2)} m`:`${nf} · q ${fmt(E.q,0)} kPa`;
+   $("ets_punto").textContent=`x ${fmt(E.x,2)}${E.forma==="terr"||E.forma==="corr"?"":" · y "+fmt(E.y,2)} · z ${fmt(E.z,2)}`;
+   $("ets_metodo").textContent={abaco:"ábaco",tabla:"Tabla 13",exacto:"exacto",21:"2:1",newmark:"Newmark"}[E.metodo]||"";
+   $("eTabForma").textContent=E.forma==="terr"?"Terraplén":"Zapata";}
   const mN={terr:0,abaco:E.forma==="terr"?"ábaco Fig. 12":"ábaco (gráfica)",tabla:E.forma==="rect"||E.forma==="cuad"?"Tabla 13":"ábaco del curso",exacto:"exacto",21:"2:1",newmark:"Newmark"}[E.metodo];
   $("eResChip").innerHTML=`<span class="chipm">${mN}</span><span class="chipm">${r.origen}</span>`;
   if(E.forma==="terr"){const g=geomT();
@@ -3626,6 +3725,7 @@ function esfuerzos(){
 }
 
 function exportar(){
+  if(!$("mainAsen").hidden)return;
   const esf=!$("mainEsf").hidden,cuerpo=esf?esfuerzos():capacidad();
   let box=$("informe");if(!box){box=document.createElement("div");box.id="informe";document.body.appendChild(box);}
   const f=new Date().toLocaleString("es-CO",{dateStyle:"long",timeStyle:"short"});
