@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610200250";
+window.APP_VER="202610202045";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -3238,8 +3238,8 @@ function bonito(v){if(!(v>0))return 1;const e=Math.pow(10,Math.floor(Math.log10(
    ===================================================================== */
 const AZ_T="#2E86C1",RJ_T="#B03A2E";
 const geomT=()=>{const q=E.tg*E.tH,a=E.tt*E.tH,b0=E.tc/2;return {q,a,b0,toe:b0+a,base:E.tc+2*a,beta:Math.atan2(1,E.tt)*180/Math.PI};};
-/* topes del punto en el terraplén: hasta 5 m más allá del pie a cada lado y una profundidad fija ligada a la base */
-const limXT=()=>{const g=geomT();return g.toe+5;},limZT=()=>{const g=geomT();return Math.max(Math.ceil(g.base*1.25),6);};
+/* topes del punto en el terraplén: hasta 10 m más allá del pie a cada lado y una profundidad fija ligada a la base */
+const limXT=()=>{const g=geomT();return g.toe+10;},limZT=()=>{const g=geomT();return Math.max(Math.ceil(g.base*1.25),6);};
 const ZONA_TXT={corona:"bajo la corona",borde:"bajo el borde de la corona",talud:"bajo el talud",pie:"en el pie del talud",fuera:"fuera del terraplén"};
 /* polígonos (en x, altura) de cada mitad, para la figura de descomposición; d = lado del punto (+1 derecha) */
 function poligonosMitades(t,x){
@@ -3603,6 +3603,8 @@ let pend=false;
 function programar(){if(!pend){pend=true;requestAnimationFrame(render);}}
 let firmaPasos="";
 function render(){pend=false;if(modulo!=="esf")return;
+  /* terraplén: el punto nunca se aleja más de 10 m del pie del talud (dedo, campos, deslizador o teclado) */
+  if(E.forma==="terr"){const lx=limXT();E.x=Math.max(-lx,Math.min(lx,E.x));E.z=Math.max(0,E.z);}
   if(E.modoQ==="P")E.q=E.P/area();sinc();
   const r=calcular();ultimoR=r;
   $("e3").hidden=E.vista!=="3d";$("eSvg").style.display=E.vista==="3d"?"none":"";
