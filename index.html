@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610200156";
+window.APP_VER="202610200159";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -89,6 +89,9 @@ header .acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-l
 .modulos button span{display:flex;flex-direction:column;line-height:1.2}
 .modulos button small{font-weight:400;font-size:11px;color:var(--tinta3)}
 .modulos button[data-v="asen"] small{color:var(--medio)}
+#eVistas .centrarT{background:var(--tinta);color:var(--panel);border-color:var(--tinta);font-weight:600;margin-left:auto}
+#eVistas .centrarT.en{background:var(--panel2);color:var(--tinta2);border-color:var(--linea2)}
+@media(max-width:900px){#eVistas .centrarT{margin-left:0;flex:1 0 100%;justify-content:center;padding:9px 12px;font-size:13.5px}}
 .tabsDatos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--panel2);border:1px solid var(--linea2);border-radius:14px 14px 0 0;overflow:hidden;margin-bottom:-12px;position:relative;z-index:1}
 .tabsDatos button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--tinta2);padding:9px 4px 7px;cursor:pointer;border-bottom:2.5px solid transparent;min-width:0}
 .tabsDatos button small{display:none;font-weight:400;font-size:10.5px;color:var(--tinta3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
@@ -3578,7 +3581,7 @@ function sinc(){
   if(terr){const g=geomT();$("eNotaT").innerHTML=`a = t·H = <b>${fmt(g.a,2)}</b> m · b₀ = c/2 = ${fmt(g.b0,2)} m · base = c + 2a = <b>${fmt(g.base,2)}</b> m<br>β = arctan(1/t) = <b>${fmt(g.beta,1)}°</b> · <b>q = γH = ${fmt(g.q,2)} kPa</b> (carga del relleno, no presión de contacto)`;}
   $("eLabX").textContent=terr?"x (desde el eje del terraplén)":"x (desde el centro, en dirección de B)";
   $("eSubAt").textContent=terr?"Puntos del ejercicio (toca uno)":"Puntos del tablero";
-  const tc=E.forma==="terr"?"Punto bajo el eje del terraplén (x = 0)":E.vista==="newmark"?"Centrar la zapata en la carta (punto bajo la carga P)":(E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo la carga P (centro del círculo)":"Centrar el punto · dividir en 4 rectángulos iguales"));
+  const tc=E.forma==="terr"?"Centrar el punto en el eje (x = 0) · dos mitades iguales":E.vista==="newmark"?"Centrar la zapata en la carta (punto bajo la carga P)":(E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo la carga P (centro del círculo)":"Centrar el punto · dividir en 4 rectángulos iguales"));
   $("eCentrar").textContent="⊕ "+tc;
   $("ef_L").style.display=E.forma==="rect"?"":"none";$("ef_y").style.display=E.forma==="corr"||terr?"none":"";
   $("eNotaL").innerHTML=E.forma==="cuad"?"Cuadrada: L = B.":(E.forma==="corr"?"Corrida: L = ∞ (se analiza una franja de 1 m).":(E.forma==="circ"?"Circular: B es el diámetro.":""));
@@ -3587,6 +3590,8 @@ function sinc(){
   pr("eForma",E.forma);pr("eMetodo",E.metodo);pr("eVel",E.vel);pr("eModoQ",E.modoQ);
   document.querySelectorAll("#eMetodo button").forEach(b=>b.hidden=!METODOS_DE[E.forma].includes(b.dataset.v));
   $("eVistas").innerHTML=VISTAS.filter(([k])=>VISTAS_DE[E.forma].includes(k)).map(([k,n])=>`<button class="chip" data-v="${k}" aria-pressed="${E.vista===k}">${n}</button>`).join("");
+  /* terraplén: botón de centrar junto a las vistas (a la vista en el celular): x = 0 → dos mitades iguales */
+  if(terr)$("eVistas").insertAdjacentHTML("beforeend",`<button class="chip centrarT${Math.abs(E.x)<1e-9?" en":""}" id="eCentrar2" title="Lleva el punto al eje: el terraplén se parte en dos mitades iguales">⊕ Centrar · 2 mitades iguales</button>`);
   $("eLabZ").textContent=E.forma==="terr"?"Profundidad z (bajo la base del terraplén)":"Profundidad z (bajo el sello)";
   $("eMetNota").textContent=E.forma==="terr"?(E.metodo==="abaco"?"Lectura en el ábaco Fig. 12 (Budhu) a media división: I ± 0,005.":"Fórmula de Osterberg: el ábaco sin error de lectura (lo que da la tabla de la clase)."):{abaco:"Se corta la Fig. 4 a ojo: I con la precisión de la gráfica (media división = 0,005).",tabla:E.forma==="corr"?"Lectura del ábaco del curso (puntos del tablero).":"Valores de la Tabla 13; si m o n caen entre filas o columnas, interpolación bilineal.",exacto:"Fórmula exacta de Boussinesq (chequeo).",21:"Reparto 2V:1H: aproximado, solo bajo el centro.",newmark:"Conteo de elementos en la carta: Δσ = q·Vi·N."}[E.metodo];
   $("eAtajos").parentElement.querySelector(".sub").style.display=$("eAtajos").style.display=(E.forma==="rect"||E.forma==="corr")?"":"none";
