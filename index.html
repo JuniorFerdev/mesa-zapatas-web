@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610202045";
+window.APP_VER="202610211536";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -558,7 +558,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 <div class="col centro">
   <section class="card stage">
     <div class="capas">
-      <div class="seg" id="segDim" role="group" aria-label="Vista"><button data-v="3d">3D</button><button data-v="2d">corte 2D</button></div>
+      <div class="seg" id="segDim" role="group" aria-label="Vista"><button data-v="2d">corte 2D</button><button data-v="3d">3D</button></div>
       <div class="capas" id="capas" style="padding:0;display:contents">
       <button class="chip" data-c="bulbo">bulbo de presiones</button>
       <button class="chip" data-c="iso">isobaras</button>
@@ -1712,12 +1712,12 @@ const cp=o=>JSON.parse(JSON.stringify(o));
 const DEF={tipo:"cuadrada",B:2,L:2,Df:1,metodo:"vesic",dcrOp:"a",modo:"dos",e1:2.6,tres:false,e2:1.5,s3:cp(SUELOS.arcillaF),pDf:{a:1,b:3,p:1},
   s1:cp(SUELOS.relleno),s2:cp(SUELOS.arcillaB),tabS:1,metII:"auto",dnf:8,Q:900,theta:0,
   modoExc:"e",eB:0,eL:0,MB:0,ML:0,capas:{bulbo:true,iso:false,cuna:false,imag:true,efec:true,excav:false},capasV:2,
-  vista:"comp",sweep:"e1",eje:"qu",zc:null,tLosa:null,bPed:null,gc:24,dim:"3d",corte3d:false,
+  vista:"comp",sweep:"e1",eje:"qu",zc:null,tLosa:null,bPed:null,gc:24,dim:"2d",dimV:2,corte3d:false,
   cerradas:{ejercicios:true,pond:true,verif:true,estab:true,dev:true}};
 let S=cp(DEF);
 try{const g=localStorage.getItem("zap.v3");if(g)S=Object.assign(cp(DEF),JSON.parse(g));}catch(e){}
 // un estado guardado por una versión anterior no trae las capas ni los pliegues nuevos
-S.capas=S.capasV===2?Object.assign({},DEF.capas,S.capas):Object.assign({},DEF.capas);S.capasV=2;S.pDf=Object.assign({},DEF.pDf,S.pDf);S.cerradas=Object.assign({},DEF.cerradas,S.cerradas);
+S.capas=S.capasV===2?Object.assign({},DEF.capas,S.capas):Object.assign({},DEF.capas);S.capasV=2;if(S.dimV!==2){S.dim="2d";S.dimV=2;}   // 21 oct 2026: el corte 2D (como en el tablero) es lo primero; el 3D es opcionalS.pDf=Object.assign({},DEF.pDf,S.pDf);S.cerradas=Object.assign({},DEF.cerradas,S.cerradas);
 [S.s1,S.s2,S.s3].forEach(o=>{if(o.tipo==="fino"&&o.phi>0)o.tipo="mixto";if(o.tipo==="granular"&&o.c>0)o.tipo="mixto";});
 const guardar=()=>{try{localStorage.setItem("zap.v3",JSON.stringify(S));}catch(e){}};
 
@@ -2886,13 +2886,15 @@ const DEF={forma:"rect",B:3,L:4,q:200,P:2400,modoQ:"q",x:0,y:0,z:1.5,metodo:"tab
   tc:7,tH:2.5,tt:1,tg:17,tpts:PTS_CLASE};
 let E=Object.assign({},DEF);
 try{const g=localStorage.getItem("esf.v1");if(g)E=Object.assign({},DEF,JSON.parse(g));}catch(e){}
+if(!E.vista2d){if(E.vista==="3d")E.vista=VISTAS_DE[E.forma][0];E.vista2d=true;}
 if(E.forma==="terr"&&!E.terrAbaco)E.metodo="abaco";E.terrAbaco=true;   // desde el 20 oct 2026 el terraplén arranca con el ábaco (como en clase)
 const guardar=()=>{try{localStorage.setItem("esf.v1",JSON.stringify(E));}catch(e){}};
 const Lr=()=>E.forma==="cuad"?E.B:(E.forma==="corr"?Infinity:E.L);
 /* área que recibe P: corrida por metro (B × 1 m), circular π·B²/4 */
 const area=()=>E.forma==="corr"?E.B:(E.forma==="circ"?Math.PI*E.B*E.B/4:E.B*Lr());
 /* lo que se muestra según la forma: solo las vistas, métodos y puntos que aplican */
-const VISTAS_DE={terr:["tsec","3d","tdesc","tabaco","tisob","curva"],rect:["3d","planta","abaco","newmark","curva"],cuad:["3d","planta","abaco","isob","newmark","curva"],corr:["3d","corr","newmark","curva"],circ:["3d","circ","newmark","curva"]};
+/* 21 oct 2026 (pedido de Fer): la planta / sección 2D va primero y es la vista por defecto; el 3D queda como opción al final */
+const VISTAS_DE={terr:["tsec","tdesc","tabaco","tisob","curva","3d"],rect:["planta","abaco","newmark","curva","3d"],cuad:["planta","abaco","isob","newmark","curva","3d"],corr:["corr","newmark","curva","3d"],circ:["circ","newmark","curva","3d"]};
 const METODOS_DE={terr:["abaco","exacto"],rect:["abaco","tabla","exacto","21","newmark"],cuad:["abaco","tabla","exacto","21","newmark"],corr:["tabla","exacto","21","newmark"],circ:["tabla","exacto","newmark"]};
 
 /* ---------------- módulo activo (cabecera) ---------------- */
@@ -3622,7 +3624,7 @@ const cambio=()=>{programar();guardar();};
 ["B","L","q","P","x","y","z","tc","tH","tt","tg"].forEach(k=>{$("er_"+k).addEventListener("input",e=>{E[k]=+e.target.value;cambio();});
   $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;cambio();}});});
 const seg=(id,f)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;f(b.dataset.v);cambio();});
-seg("eForma",v=>{E.forma=v;if(v==="terr")E.metodo="abaco";});seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
+seg("eForma",v=>{E.forma=v;if(v==="terr")E.metodo="abaco";E.vista=VISTAS_DE[v][0];});seg("eModoQ",v=>{E.modoQ=v;if(v==="P")E.P=Math.round(E.q*area());});seg("eMetodo",v=>E.metodo=v);seg("eVistas",v=>E.vista=v);
 /* centrar el punto bajo la carga P en cualquier forma y vista (planta, Newmark, ábacos): la vista no cambia */
 const centrar=()=>{E.x=0;E.y=0;cambio();};
 $("eCentrar").addEventListener("click",centrar);
