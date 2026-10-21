@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610211536";
+window.APP_VER="202610211549";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -92,6 +92,9 @@ header .acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-l
 #eVistas .centrarT{background:var(--tinta);color:var(--panel);border-color:var(--tinta);font-weight:600;margin-left:auto}
 #eVistas .centrarT.en{background:var(--panel2);color:var(--tinta2);border-color:var(--linea2)}
 @media(max-width:900px){#eVistas .centrarT{margin-left:0;flex:1 0 100%;justify-content:center;padding:9px 12px;font-size:13.5px}}
+.chipPy{display:inline-block;margin:4px 0 2px;font:500 11.5px var(--fm);padding:3px 8px;border-radius:7px;border:1px solid var(--linea2);background:var(--panel2);color:var(--tinta2)}
+.chipPy.ok{border-color:#9FCBAE;background:#EAF5EE;color:#1E6B3B}.chipPy.mal{border-color:#E3A69E;background:#FBECEA;color:var(--falla)}
+.chipPy[hidden]{display:none}
 .tabsDatos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--panel2);border:1px solid var(--linea2);border-radius:14px 14px 0 0;overflow:hidden;margin-bottom:-12px;position:relative;z-index:1}
 .tabsDatos button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--tinta2);padding:9px 4px 7px;cursor:pointer;border-bottom:2.5px solid transparent;min-width:0}
 .tabsDatos button small{display:none;font-weight:400;font-size:10.5px;color:var(--tinta3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
@@ -620,6 +623,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <div class="qu">
       <div class="big"><span id="o_qu">—</span> <span class="u">kPa</span></div>
       <div class="s" id="o_Qu"></div>
+      <div class="chipPy" id="chipPyCap" hidden></div>
       <div class="gob" id="o_gob"></div>
       <div id="o_cmp" class="cmp" style="margin-top:10px"></div>
       <div class="bar" id="o_bar"></div>
@@ -711,7 +715,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 <div class="col der">
   <section class="card"><h2>Incremento de esfuerzo Δσ<sub>z</sub></h2>
     <div class="qu"><div class="big"><span id="eRes">—</span> <span class="u">kPa</span></div>
-      <div class="s" id="eResChip"></div><div id="eComp" class="ecomp"></div></div>
+      <div class="s" id="eResChip"></div><div class="chipPy" id="chipPyEsf" hidden></div><div id="eComp" class="ecomp"></div></div>
   </section>
   <section class="card"><h2>Desarrollo paso a paso</h2><div class="body">
     <div class="reprod" id="eRep">
@@ -1652,6 +1656,18 @@ const ESF=(function(){
     return {N,celdas,dsq:N*VI};
   }
   const dentroRect=(px,py,B,L)=>(x,y)=>Math.abs(x+px)<=B/2&&Math.abs(y+py)<=L/2;
+  /* carga NO uniforme (terraplén): cada muestra pesa q_local/q (1 bajo la corona, lineal en el talud, 0 fuera).
+     Con el muestreo uniforme en influencia, N·Vi·q = Δσ exacto también para carga variable */
+  function newmarkContarPeso(peso,z,ns){
+    ns=ns||6;const celdas=[];let N=0;
+    for(let i=0;i<10;i++)for(let j=0;j<32;j++){let c=0;
+      for(let a=0;a<ns;a++)for(let b=0;b<ns;b++){const Iv=(i+(a+.5)/ns)/10,th=2*Math.PI*(j+(b+.5)/ns)/32,r=z*Math.sqrt(Math.pow(1-Iv,-2/3)-1);
+        c+=peso(r*Math.cos(th),r*Math.sin(th));}
+      const f=c/(ns*ns);if(f>0){celdas.push({anillo:i,sector:j,f});N+=f;}}
+    return {N,celdas,dsq:N*VI};
+  }
+  /* peso del terraplén visto desde el punto (px): x relativo al punto, carga constante a lo largo de y */
+  const pesoTerraplen=(px,c,H,t)=>{const b0=c/2,a=t*H,toe=b0+a;return (x)=>{const X=Math.abs(x+px);return X<=b0?1:(X<toe?(toe-X)/a:0);};};
 
   /* lectura en el ábaco (Fig. 4): lo que da cortar la gráfica a ojo. La rejilla va cada 0,01;
      se lee a media división (0,005). Ej.: I(0,5; 0,8) = 0,1103 exacto → se lee 0,110 */
@@ -1678,10 +1694,38 @@ const ESF=(function(){
     return {q,a,b0,toe,zona,partes,ds:partes.reduce((S,p)=>S+p.s*p.q*p.I,0)};
   }
   const terraplen={I:Iterraplen,ds:dsTerraplen};
-  return {terraplen,lecturaAbaco,dsRectAbaco,PASO_ABACO,newmarkContar,dentroRect,I,FILAS,COLS,TABLA13,interpTabla,descomponer,dsRectIdx,dsRectTabla,metodo21,fang,circular,puntual,corrida,
+  return {newmarkContarPeso,pesoTerraplen,terraplen,lecturaAbaco,dsRectAbaco,PASO_ABACO,newmarkContar,dentroRect,I,FILAS,COLS,TABLA13,interpTabla,descomponer,dsRectIdx,dsRectTabla,metodo21,fang,circular,puntual,corrida,
     newmarkAnillos,VI,INF};
 })();
 if(typeof module!=="undefined")module.exports=ESF;
+
+/* =====================================================================
+   PUENTE CON EL BACKEND PYTHON (opcional)
+   Si la página la sirve el servidor Python (backend/python: cimentaciones_backend.servidor o la app de
+   escritorio), /api/salud responde y los resultados se consultan también al motor Python.
+   En GitHub Pages /api no existe: la app sigue calculando en el navegador (motores JS de respaldo).
+   ===================================================================== */
+(function(){
+"use strict";
+const B={python:false,version:null,esperando:[]};
+B.llamar=(ruta,datos)=>fetch("api/"+ruta,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)})
+  .then(r=>r.json()).then(j=>{if(!j.ok)throw new Error(j.error||"error del backend");return j.resultado;});
+B.cuandoListo=f=>{if(B.python)f();else B.esperando.push(f);};
+if(/^https?:$/.test(location.protocol))
+  fetch("api/salud",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{
+    if(j&&j.motor==="python"){B.python=true;B.version=j.version;document.documentElement.classList.add("conPython");
+      B.esperando.splice(0).forEach(f=>f());}}).catch(()=>{});
+/* chip de verificación: muestra el valor del motor Python y si coincide con el de la pantalla */
+let tiempos={};
+B.verificar=(id,ruta,datos,valorPantalla,campo,dec)=>{
+  if(!B.python)return;clearTimeout(tiempos[id]);
+  tiempos[id]=setTimeout(()=>B.llamar(ruta,datos).then(r=>{const el=document.getElementById(id);if(!el)return;
+    const v=r[campo],ok=v!=null&&Math.abs(v-valorPantalla)<=1e-6*Math.max(1,Math.abs(valorPantalla));
+    el.hidden=false;el.className="chipPy "+(ok?"ok":"mal");
+    el.textContent=`motor Python: ${v==null?"—":v.toFixed(dec).replace(".",",")} ${ok?"✓ coincide":"≠ revisar"}`;})
+    .catch(e=>{const el=document.getElementById(id);if(el){el.hidden=false;el.className="chipPy mal";el.textContent="motor Python: "+e.message;}}),250);};
+window.MZB=B;
+})();
 
 (function(){
 "use strict";
@@ -2655,6 +2699,7 @@ function render(){
   if(S.modo!=="dos"&&SW[S.sweep].dos)S.sweep="Df";
   sinc();
   const R=sistema(S),LC=carga(R);ultimo={R,LC};
+  if(window.MZB&&!rapido)MZB.verificar("chipPyCap","capacidad",S,R.qu,"qu",2);   // con el servidor Python: misma cifra con el motor Python
   const d3=S.dim==="3d";
   $("sec").style.display=d3?"none":"";$("pie2d").style.display=d3?"none":"";$("v3").style.display=d3?"":"none";
   if(d3)pintar3D(R,LC);else dibujarSeccion(R,LC);
@@ -2664,6 +2709,7 @@ function render(){
 }
 function programar(){if(!pend){pend=true;requestAnimationFrame(()=>{render();});}}
 const cambio=()=>{rapido=false;programar();guardar();};
+if(window.MZB)MZB.cuandoListo(()=>programar());   // al detectar el servidor Python se recalcula para mostrar su verificación
 /* datos para el informe PDF (src/informe.js); las dos pestañas son independientes */
 let ultimo=null;
 window.MZ={informe:()=>({S:cp(S),R:ultimo&&ultimo.R,LC:ultimo&&ultimo.LC})};
@@ -2894,8 +2940,8 @@ const Lr=()=>E.forma==="cuad"?E.B:(E.forma==="corr"?Infinity:E.L);
 const area=()=>E.forma==="corr"?E.B:(E.forma==="circ"?Math.PI*E.B*E.B/4:E.B*Lr());
 /* lo que se muestra según la forma: solo las vistas, métodos y puntos que aplican */
 /* 21 oct 2026 (pedido de Fer): la planta / sección 2D va primero y es la vista por defecto; el 3D queda como opción al final */
-const VISTAS_DE={terr:["tsec","tdesc","tabaco","tisob","curva","3d"],rect:["planta","abaco","newmark","curva","3d"],cuad:["planta","abaco","isob","newmark","curva","3d"],corr:["corr","newmark","curva","3d"],circ:["circ","newmark","curva","3d"]};
-const METODOS_DE={terr:["abaco","exacto"],rect:["abaco","tabla","exacto","21","newmark"],cuad:["abaco","tabla","exacto","21","newmark"],corr:["tabla","exacto","21","newmark"],circ:["tabla","exacto","newmark"]};
+const VISTAS_DE={terr:["tsec","tdesc","tabaco","newmark","tisob","curva","3d"],rect:["planta","abaco","newmark","curva","3d"],cuad:["planta","abaco","isob","newmark","curva","3d"],corr:["corr","newmark","curva","3d"],circ:["circ","newmark","curva","3d"]};
+const METODOS_DE={terr:["abaco","exacto","newmark"],rect:["abaco","tabla","exacto","21","newmark"],cuad:["abaco","tabla","exacto","21","newmark"],corr:["tabla","exacto","21","newmark"],circ:["tabla","exacto","newmark"]};
 
 /* ---------------- módulo activo (cabecera) ---------------- */
 let modulo="cap";try{modulo=localStorage.getItem("modulo.v1")||"cap";}catch(e){}
@@ -2919,6 +2965,9 @@ const PASO_T=0.005,lecturaT=I=>Math.round(I/PASO_T)*PASO_T;     // lectura en la
 const dsTerrAbaco=t=>t.partes.length?t.partes.reduce((S,p)=>S+p.s*p.q*lecturaT(p.I),0):t.ds;
 function calcular(){
   if(E.forma==="terr"){const t=TERR(E.x,E.z),r={terr:t,exacto:t.ds,abaco:dsTerrAbaco(t),lugar:t.zona,tabla:null,d21:null,nm:null};
+    /* carta de Newmark con carga variable: cada elemento pesa la altura relativa del relleno encima (1 corona, lineal en el talud) */
+    if((E.metodo==="newmark"||E.vista==="newmark")&&E.z>1e-9)r.nm=ESF.newmarkContarPeso(ESF.pesoTerraplen(E.x,E.tc,E.tH,E.tt),E.z,6);
+    if(E.metodo==="newmark"&&r.nm)return Object.assign(r,{valor:t.q*r.nm.dsq,origen:"carta de Newmark (conteo ponderado por la altura del relleno)"});
     r.valor=E.metodo==="abaco"?r.abaco:r.exacto;
     r.origen=E.metodo==="abaco"?"ábaco Fig. 12 (Budhu) leído a media división (±0,005)":"Osterberg exacto (lo que da el ábaco sin error de lectura)";return r;}
   const p={x:E.x,y:E.forma==="corr"?0:E.y},q=E.q,z=E.z,B=E.B,L=Lr(),r={};
@@ -3127,16 +3176,26 @@ function dibujarNewmark(r){
   rad.slice(1,10).forEach(rr=>svg.appendChild(el("circle",{cx,cy,r:rr,fill:"none",stroke:tinta,"stroke-width":0.9,opacity:.7})));
   for(let j=0;j<32;j++){const a=2*Math.PI*j/32;svg.appendChild(el("path",{d:`M${cx} ${cy}L${cx+285*Math.cos(a)} ${cy-285*Math.sin(a)}`,stroke:tinta,"stroke-width":0.6,opacity:.5}));}
   // zapata a escala (1 m = Zp/z px), con el punto de interés en el centro
-  const k=Zp/E.z,B=E.B,L=Lr(),px=E.x,py=E.forma==="corr"?0:E.y,zp=el("g",{"data-foco":"escala"});
-  if(E.forma==="circ")zp.appendChild(el("circle",{cx:cx-px*k,cy:cy+py*k,r:B/2*k,fill:"none",stroke:falla,"stroke-width":2.4}));
+  const k=Zp/E.z,B=E.B,L=Lr(),px=E.x,py=E.forma==="corr"||E.forma==="terr"?0:E.y,zp=el("g",{"data-foco":"escala"}),terr=E.forma==="terr";
+  const qN=terr?r.terr.q:E.q;
+  if(terr){const g=geomT(),X=v=>cx+(v-px)*k,hy=285;   // franja infinita en planta: corona (q) y taludes (q baja a 0)
+    zp.appendChild(el("rect",{x:X(-g.b0),y:cy-hy,width:g.b0*2*k,height:2*hy,fill:"none",stroke:falla,"stroke-width":2.4}));
+    [[-g.toe,-g.b0],[g.b0,g.toe]].forEach(([a,b])=>zp.appendChild(el("rect",{x:X(a),y:cy-hy,width:(b-a)*k,height:2*hy,fill:"none",stroke:falla,"stroke-width":1.4,"stroke-dasharray":"6 4"})));
+    txt(svg,X(0),cy-200,"corona (q)",{anchor:"middle",fill:falla,fs:11.5,fw:700});
+    txt(svg,X(-(g.b0+g.toe)/2),cy-184,"talud",{anchor:"middle",fill:falla,fs:10.5,fw:600});txt(svg,X((g.b0+g.toe)/2),cy-184,"talud",{anchor:"middle",fill:falla,fs:10.5,fw:600});}
+  else if(E.forma==="circ")zp.appendChild(el("circle",{cx:cx-px*k,cy:cy+py*k,r:B/2*k,fill:"none",stroke:falla,"stroke-width":2.4}));
   else{const hl=L===Infinity?40:L/2;zp.appendChild(el("rect",{x:cx+(-B/2-px)*k,y:cy-(hl-py)*k,width:B*k,height:2*hl*k,fill:"none",stroke:falla,"stroke-width":2.4}));}
   svg.appendChild(zp);svg.appendChild(el("circle",{cx,cy,r:5,fill:falla,"data-foco":"punto"}));
   svg.appendChild(el("path",{d:`M${cx-Zp/2} ${cy+300}h${Zp}`,stroke:tinta,"stroke-width":2.5}));
   txt(svg,cx,cy+294,`Z = z = ${fmt(E.z)} m`,{anchor:"middle",fill:tinta,fs:12,fw:600});
   const x0=650;txt(svg,x0,80,"Conteo",{fill:tinta,fw:600,mono:false,fs:14});
-  [[`N = ${fmt(nm.N,1)} elementos`,"conteo"],[`Vi = 0,003125`,""],[`Δσ = q·Vi·N`,""],[`= ${fmt(E.q,0)} × 0,003125 × ${fmt(nm.N,1)}`,""],[`= ${fmt(E.q*nm.dsq,1)} kPa`,"conteo"],[`exacto: ${fmt(r.exacto,1)} kPa`,""]]
+  [[`N = ${fmt(nm.N,1)} elementos${terr?" (ponderados)":""}`,"conteo"],[`Vi = 0,003125`,""],[`Δσ = q·Vi·N`,""],[`= ${fmt(qN,terr?1:0)} × 0,003125 × ${fmt(nm.N,1)}`,""],[`= ${fmt(qN*nm.dsq,1)} kPa`,"conteo"],[`exacto: ${fmt(r.exacto,1)} kPa`,""]]
     .forEach(([t,f],i)=>txt(svg,x0,110+i*24,t,{fill:i===4?falla:tinta,fs:13,fw:i===4?700:400,foco:f||undefined}));
-  txt(svg,x0,280,"Arrastra la zapata para mover el punto.",{mono:false,fs:11,fill:V("--tinta3")});
+  if(terr){txt(svg,x0,268,"Bajo la corona cada elemento cuenta completo;",{mono:false,fs:11,fill:V("--tinta3")});
+    txt(svg,x0,284,"bajo el talud cuenta la fracción de altura",{mono:false,fs:11,fill:V("--tinta3")});
+    txt(svg,x0,300,"del relleno (q baja de q a 0 hasta el pie).",{mono:false,fs:11,fill:V("--tinta3")});
+    txt(svg,x0,330,"Arrastra el terraplén para mover el punto.",{mono:false,fs:11,fill:V("--tinta3")});}
+  else txt(svg,x0,280,"Arrastra la zapata para mover el punto.",{mono:false,fs:11,fill:V("--tinta3")});
   txt(svg,x0,298,"A mano se cuenta con ±3 elementos.",{mono:false,fs:11,fill:V("--tinta3")});
   geoN={cx,cy,k};
 }
@@ -3455,6 +3514,14 @@ function tablaTerr(paraInforme){
 function construirPasos(r){
   const P=[],ec=(t,h,foco)=>P.push({t,h,foco});
   const q=E.q,z=E.z;
+  if(E.forma==="terr"&&E.metodo==="newmark"&&r.nm){const g=geomT();
+    ec("Carga del relleno",`<span class="ec">q = γH = ${fmt(E.tg,2)} × ${fmt(E.tH,2)} = <b>${fmt(g.q,2)} kPa</b></span>`,"punto");
+    ec("Fijar la escala",`El segmento Z de la carta vale z = ${fmt(z)} m.`,"escala");
+    ec("Dibujar el terraplén en planta",`Corona de ${fmt(E.tc,2)} m y taludes de a = ${fmt(g.a,2)} m a cada lado, a escala 1 m = Z/${fmt(z)}. Es una franja infinita: se extiende a lo largo de toda la carta.`,"escala");
+    ec("Punto en el centro",`El punto (x = ${fmt(E.x,2)} m) va sobre el centro de la carta.`,"punto");
+    ec("Contar elementos",`Bajo la corona cada elemento cuenta 1; bajo el talud cuenta la fracción de altura del relleno (q baja linealmente hasta 0 en el pie).<span class="ec">N = ${fmt(r.nm.N,1)} elementos ponderados</span>`,"conteo");
+    ec("Resultado",`<span class="ec">Δσz = q·Vi·N = ${fmt(g.q,2)} × 0,003125 × ${fmt(r.nm.N,1)} = <b>${fmt(g.q*r.nm.dsq,1)} kPa</b></span>exacto (Osterberg) ${fmt(r.exacto,2)} kPa`,"conteo");
+    return P;}
   if(E.forma==="terr"){const t=r.terr,g=geomT(),ab=E.metodo==="abaco";
     ec("Datos del terraplén",`<span class="ec">a = t·H = ${fmt(E.tt,2)} × ${fmt(E.tH,2)} = ${fmt(g.a,3)} m · b₀ = c/2 = ${fmt(g.b0,3)} m · base = c + 2a = ${fmt(g.base,2)} m</span><span class="ec">q = γ·H = ${fmt(E.tg,2)} × ${fmt(E.tH,2)} = <b>${fmt(g.q,2)} kPa</b></span>q es el peso del relleno, no una presión de contacto. Talud ${fmt(E.tt,2)}H:1V → β = ${fmt(g.beta,1)}°.`,"punto");
     ec("¿Dónde está el punto?",`x = ${fmt(E.x,2)} m, z = ${fmt(z,2)} m: ${ZONA_TXT[t.zona]} (corona hasta ${fmt(g.b0,2)} m, pie a ${fmt(g.toe,2)} m). Se parte el terraplén por la vertical del punto.`,"punto");
@@ -3543,7 +3610,7 @@ function resultados(r){
   const mN={terr:0,abaco:E.forma==="terr"?"ábaco Fig. 12":"ábaco (gráfica)",tabla:E.forma==="rect"||E.forma==="cuad"?"Tabla 13":"ábaco del curso",exacto:"exacto",21:"2:1",newmark:"Newmark"}[E.metodo];
   $("eResChip").innerHTML=`<span class="chipm">${mN}</span><span class="chipm">${r.origen}</span>`;
   if(E.forma==="terr"){const g=geomT();
-    $("eComp").innerHTML=[["abaco","Ábaco Fig. 12 (lectura ±0,005)",r.abaco],["exacto","Exacto (Osterberg)",r.exacto]].map(([k,n,v])=>`<div class="fila${E.metodo===k?" act":""}"><span>${n}</span><b>${fmt(v,2)} kPa</b><em>${k==="abaco"&&r.exacto?((v/r.exacto-1)*100>=0?"+":"")+fmt((v/r.exacto-1)*100,1)+" %":""}</em></div>`).join("");
+    $("eComp").innerHTML=[["abaco","Ábaco Fig. 12 (lectura ±0,005)",r.abaco],["exacto","Exacto (Osterberg)",r.exacto],...(r.nm?[["newmark","Carta de Newmark (ponderada)",g.q*r.nm.dsq]]:[])].map(([k,n,v])=>`<div class="fila${E.metodo===k?" act":""}"><span>${n}</span><b>${fmt(v,2)} kPa</b><em>${k!=="exacto"&&r.exacto?((v/r.exacto-1)*100>=0?"+":"")+fmt((v/r.exacto-1)*100,1)+" %":""}</em></div>`).join("");
     const ch=[],add=(c,t,d)=>ch.push(`<div class="chk"><span class="dot" style="background:${c}"></span><span>${t}<em>${d}</em></span></div>`);
     add("var(--tinta3)","q = γH no es presión de contacto",`Es el peso del relleno: ${fmt(E.tg,1)} × ${fmt(E.tH,2)} = ${fmt(g.q,1)} kPa.`);
     if(r.lugar==="talud")add("var(--medio)","Punto bajo el talud","Tres términos: la carga en la vertical del punto es q′ < q.");
@@ -3596,7 +3663,7 @@ function sinc(){
   /* terraplén: botón de centrar junto a las vistas (a la vista en el celular): x = 0 → dos mitades iguales */
   if(terr)$("eVistas").insertAdjacentHTML("beforeend",`<button class="chip centrarT${Math.abs(E.x)<1e-9?" en":""}" id="eCentrar2" title="Lleva el punto al eje: el terraplén se parte en dos mitades iguales">⊕ Centrar · 2 mitades iguales</button>`);
   $("eLabZ").textContent=E.forma==="terr"?"Profundidad z (bajo la base del terraplén)":"Profundidad z (bajo el sello)";
-  $("eMetNota").textContent=E.forma==="terr"?(E.metodo==="abaco"?"Lectura en el ábaco Fig. 12 (Budhu) a media división: I ± 0,005.":"Fórmula de Osterberg: el ábaco sin error de lectura (lo que da la tabla de la clase)."):{abaco:"Se corta la Fig. 4 a ojo: I con la precisión de la gráfica (media división = 0,005).",tabla:E.forma==="corr"?"Lectura del ábaco del curso (puntos del tablero).":"Valores de la Tabla 13; si m o n caen entre filas o columnas, interpolación bilineal.",exacto:"Fórmula exacta de Boussinesq (chequeo).",21:"Reparto 2V:1H: aproximado, solo bajo el centro.",newmark:"Conteo de elementos en la carta: Δσ = q·Vi·N."}[E.metodo];
+  $("eMetNota").textContent=E.forma==="terr"?(E.metodo==="newmark"?"Carta de Newmark: cada elemento pesa la altura del relleno encima (1 bajo la corona, fracción bajo el talud); Δσ = q·Vi·N.":E.metodo==="abaco"?"Lectura en el ábaco Fig. 12 (Budhu) a media división: I ± 0,005.":"Fórmula de Osterberg: el ábaco sin error de lectura (lo que da la tabla de la clase)."):{abaco:"Se corta la Fig. 4 a ojo: I con la precisión de la gráfica (media división = 0,005).",tabla:E.forma==="corr"?"Lectura del ábaco del curso (puntos del tablero).":"Valores de la Tabla 13; si m o n caen entre filas o columnas, interpolación bilineal.",exacto:"Fórmula exacta de Boussinesq (chequeo).",21:"Reparto 2V:1H: aproximado, solo bajo el centro.",newmark:"Conteo de elementos en la carta: Δσ = q·Vi·N."}[E.metodo];
   $("eAtajos").parentElement.querySelector(".sub").style.display=$("eAtajos").style.display=(E.forma==="rect"||E.forma==="corr")?"":"none";
   $("eAtajos").innerHTML=terr?E.tpts.map((p,k)=>`<button class="chip" data-tp="${k}" aria-pressed="${Math.abs(p.x-E.x)<1e-9&&Math.abs(p.z-E.z)<1e-9}">${p.n} (${fmt(p.x,1)}; ${fmt(p.z,1)})</button>`).join(""):(E.forma==="corr"?[["0; 0,5",0,1.5],["0; 1",0,3],["0; 2",0,6],["0; 3",0,9],["0,33; 1",1,3],["0,5; 1",1.5,3],["1; 1",3,3]].map(([n,x,z])=>`<button class="chip" data-x="${x}" data-y="0" data-z="${z}" title="x/B; z/B">${n}</button>`)
     :[["a",0,0,0],["b",0,0,1.5],["c",0,0,3],["d",0,0,6],["f",1.5,0,3],["g",3,0,3],["h",1.5,2,3]].map(([n,x,y,z])=>`<button class="chip" data-x="${x}" data-y="${y}" data-z="${z}">${n} (${fmt(x,1)}; ${fmt(y,1)}; z ${fmt(z,1)})</button>`)).join("");
@@ -3609,6 +3676,7 @@ function render(){pend=false;if(modulo!=="esf")return;
   if(E.forma==="terr"){const lx=limXT();E.x=Math.max(-lx,Math.min(lx,E.x));E.z=Math.max(0,E.z);}
   if(E.modoQ==="P")E.q=E.P/area();sinc();
   const r=calcular();ultimoR=r;
+  if(window.MZB)MZB.verificar("chipPyEsf","esfuerzo",E,r.exacto,"exacto",2);   // con el servidor Python: Δσ exacto con el motor Python
   $("e3").hidden=E.vista!=="3d";$("eSvg").style.display=E.vista==="3d"?"none":"";
   const tt=$("eTerrTabla");tt.hidden=true;tt.innerHTML="";
   if(E.vista==="3d"){$("eTabla").hidden=true;if(E.forma==="terr")dibujarTerr3D(r);else dibujar3D(r);resultados(r);
@@ -3621,6 +3689,7 @@ function render(){pend=false;if(modulo!=="esf")return;
   if(firma!==firmaPasos){firmaPasos=firma;pasos=nuevos;actual=0;mostrarPasos(true);jugar(true);}else mostrarPasos();
 }
 const cambio=()=>{programar();guardar();};
+if(window.MZB)MZB.cuandoListo(()=>programar());   // al detectar el servidor Python se recalcula para mostrar su verificación
 ["B","L","q","P","x","y","z","tc","tH","tt","tg"].forEach(k=>{$("er_"+k).addEventListener("input",e=>{E[k]=+e.target.value;cambio();});
   $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;cambio();}});});
 const seg=(id,f)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;f(b.dataset.v);cambio();});
@@ -3644,7 +3713,7 @@ const aMetros=ev=>{const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY
   return {x:(p.x-geo.ox)/geo.s,y:(geo.oy-p.y)/geo.s,px:p.x};};
 svg.addEventListener("pointerdown",ev=>{if(E.vista==="newmark"&&geoN){const pt=svg.createSVGPoint(),ini=[E.x,E.y];
     const loc=e=>{pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse());},p0=loc(ev);svg.setPointerCapture(ev.pointerId);
-    svg.onpointermove=e=>{const p=loc(e);E.x=Math.round((ini[0]-(p.x-p0.x)/geoN.k)*20)/20;if(E.forma!=="corr")E.y=Math.round((ini[1]+(p.y-p0.y)/geoN.k)*20)/20;programar();};
+    svg.onpointermove=e=>{const p=loc(e);E.x=Math.round((ini[0]-(p.x-p0.x)/geoN.k)*20)/20;if(E.forma!=="corr"&&E.forma!=="terr")E.y=Math.round((ini[1]+(p.y-p0.y)/geoN.k)*20)/20;programar();};
     svg.onpointerup=()=>{svg.onpointermove=null;guardar();};return;}
   if(E.forma==="terr"&&E.vista==="tsec"&&geoT){const pt=svg.createSVGPoint();svg.setPointerCapture(ev.pointerId);
     const mover=e=>{pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
