@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610241719";
+window.APP_VER="202610241727";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -99,6 +99,12 @@ header .acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-l
 .row2 .numIn{width:62px}
 .numIn:disabled{opacity:.5}
 .avisoG{margin:4px 0 8px;font-size:11.5px;color:var(--medio)}.avisoG[hidden]{display:none}
+.vinc{display:block;width:100%;margin:0 0 10px;font:600 12.5px var(--fs);padding:7px 10px;border-radius:9px;cursor:pointer;text-align:left;
+  border:1px solid var(--linea2);background:var(--panel2);color:var(--tinta3)}
+.vinc[aria-pressed="true"]{background:#E8F1F8;border-color:#9FC3DE;color:#1F4E79}
+.vinc[aria-pressed="false"]::after{content:" (desactivado)";font-weight:400}
+body:not(.ayuda) .vincNota{display:block}.vincNota[hidden]{display:none!important}
+#eAtajosCap .chip{margin:6px 6px 0 0}
 .tabsDatos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--panel2);border:1px solid var(--linea2);border-radius:14px 14px 0 0;overflow:hidden;margin-bottom:-12px;position:relative;z-index:1}
 .tabsDatos button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--tinta2);padding:9px 4px 7px;cursor:pointer;border-bottom:2.5px solid transparent;min-width:0}
 .tabsDatos button small{display:none;font-weight:400;font-size:10.5px;color:var(--tinta3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
@@ -481,6 +487,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <button data-t="zapata" role="tab">Zapata<small id="ts_zapata"></small></button><button data-t="suelo" role="tab">Suelo<small id="ts_suelo"></small></button><button data-t="agua" role="tab">Agua<small id="ts_agua"></small></button><button data-t="carga" role="tab">Carga<small id="ts_carga"></small></button><button data-t="ejercicios" role="tab">Ejemplos<small id="ts_ejercicios"></small></button>
   </nav>
   <section class="card" data-tog="zapata" data-pan="zapata"><h2><button class="tog" aria-expanded="true">Zapata</button><span class="resumen" id="rs_zapata"></span></h2><div class="body">
+    <button class="vinc" data-vinc aria-pressed="true" title="Forma, B, L y la carga P se comparten con la pestaña Esfuerzos y terraplenes">🔗 Vinculado con Esfuerzos</button>
     <div class="tipos" id="tipos" role="group" aria-label="Tipo de zapata">
       <button class="tipo" data-v="corrida"><svg viewBox="0 0 34 22"><rect x="2" y="9" width="30" height="7" fill="currentColor" opacity=".25" stroke="currentColor"/></svg>corrida</button>
       <button class="tipo" data-v="cuadrada"><svg viewBox="0 0 34 22"><rect x="9" y="3" width="16" height="16" fill="currentColor" opacity=".25" stroke="currentColor"/></svg>cuadrada</button>
@@ -663,6 +670,8 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <button data-t="forma" role="tab"><span id="eTabForma">Zapata</span><small id="ets_forma"></small></button><button data-t="punto" role="tab">Punto<small id="ets_punto"></small></button><button data-t="metodo" role="tab">Método<small id="ets_metodo"></small></button>
   </nav>
   <section class="card" data-pan="forma"><h2 id="eTitZ">Zapata y carga</h2><div class="body">
+    <button class="vinc" data-vinc aria-pressed="true" title="Forma, B, L y la carga P se comparten con la pestaña Capacidad de carga">🔗 Vinculado con Capacidad de carga</button>
+    <p class="note vincNota" id="eVincNota" hidden></p>
     <div class="seg full" id="eForma" role="group" aria-label="Forma" style="margin-bottom:10px">
       <button data-v="rect">rectangular</button><button data-v="cuad">cuadrada</button><button data-v="corr">corrida</button><button data-v="circ">circular</button><button data-v="terr">terraplén</button>
     </div>
@@ -693,6 +702,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <p class="note">Arrastra el punto rojo en el dibujo o muévelo con las flechas del teclado.</p>
     <p class="sub" style="margin:8px 0 4px" id="eSubAt">Puntos del tablero</p>
     <div class="chips" id="eAtajos" style="margin:0"></div>
+    <div id="eAtajosCap"></div>
   </div></section>
   <section class="card" data-pan="metodo"><h2>Método</h2><div class="body">
     <div class="seg full" id="eMetodo" role="group" aria-label="Método">
@@ -2715,6 +2725,7 @@ function render(){
   dibujarMatriz(R);resultados(R,LC);vistaEstab(R,LC);resumenes(R,LC);aplicarPliegues();marcarInactivos(R);
   if(S.vista!=="comp")$("tablaDf").innerHTML="";
   ({comp:vistaComp,esf:vistaEsf,cont:vistaCont,pres:vistaPres})[S.vista](R,LC);
+  if(!desdeVinculo)empujarAEsf();desdeVinculo=false;    // lo que se cambie aquí pasa a Esfuerzos (si está vinculado)
 }
 function programar(){if(!pend){pend=true;requestAnimationFrame(()=>{render();});}}
 const cambio=()=>{rapido=false;programar();guardar();};
@@ -2722,6 +2733,26 @@ if(window.MZB)MZB.cuandoListo(()=>programar());   // al detectar el servidor Pyt
 /* datos para el informe PDF (src/informe.js); las dos pestañas son independientes */
 let ultimo=null;
 window.MZ={informe:()=>({S:cp(S),R:ultimo&&ultimo.R,LC:ultimo&&ultimo.LC})};
+/* ===================== VÍNCULO CON «ESFUERZOS Y TERRAPLENES» (24 oct 2026, pedido de Fer) =====================
+   Se comparten solo los datos que significan lo mismo en los dos módulos: forma, B, L y la carga P.
+   El terraplén no se vincula (no es una zapata). Un botón en cada pestaña activa o desactiva el vínculo. */
+const TIPO_A_FORMA={cuadrada:"cuad",rectangular:"rect",corrida:"corr",circular:"circ"},FORMA_A_TIPO={cuad:"cuadrada",rect:"rectangular",corr:"corrida",circ:"circular"};
+const vinculado=()=>{try{return localStorage.getItem("vinculo.v1")!=="0";}catch(e){return true;}};
+let desdeVinculo=false;
+MZ.compartido=()=>({forma:TIPO_A_FORMA[S.tipo],B:S.B,L:S.tipo==="rectangular"?S.L:S.B,P:S.Q>0?S.Q:null,Df:S.Df,
+  dos:S.modo==="dos",tres:S.modo==="dos"&&!!S.tres,e1:S.e1,e2:S.e2,s1:S.s1.nom,s2:S.s2.nom,s3:S.s3&&S.s3.nom,eB:S.eB,eL:S.eL});
+MZ.aplicar=o=>{let c=false;const t=FORMA_A_TIPO[o.forma];
+  if(t&&t!==S.tipo){S.tipo=t;c=true;}
+  if(o.B>0&&Math.abs(o.B-S.B)>1e-9){S.B=o.B;c=true;}
+  if(S.tipo==="rectangular"&&o.L>0&&Math.abs(o.L-S.L)>1e-9){S.L=o.L;c=true;}
+  if(o.P>0&&Math.abs(o.P-S.Q)>1e-6){S.Q=o.P;c=true;}
+  if(c){desdeVinculo=true;S.zc=null;cambio();}};
+const empujarAEsf=()=>{if(vinculado()&&window.ESFI&&ESFI.aplicar)ESFI.aplicar(MZ.compartido());};
+const marcarVinc=()=>document.querySelectorAll("[data-vinc]").forEach(b=>b.setAttribute("aria-pressed",String(vinculado())));
+document.querySelectorAll("[data-vinc]").forEach(b=>b.addEventListener("click",()=>{
+  try{localStorage.setItem("vinculo.v1",vinculado()?"0":"1");}catch(e){}marcarVinc();
+  if(vinculado())empujarAEsf();else if(window.ESFI&&ESFI.aplicar)ESFI.aplicar(null);}));
+marcarVinc();
 /* mientras se arrastra un control: dibujo con malla gruesa (los números siguen siendo exactos);
    al soltar, 0,22 s después, se repinta todo a resolución completa */
 let rapido=false,tFino=null;
@@ -3668,6 +3699,13 @@ function sinc(){
   if(terr){const g=geomT();$("eNotaT").innerHTML=`a = t·H = <b>${fmt(g.a,2)}</b> m · b₀ = c/2 = ${fmt(g.b0,2)} m · base = c + 2a = <b>${fmt(g.base,2)}</b> m<br>β = arctan(1/t) = <b>${fmt(g.beta,1)}°</b> · <b>q = γH = ${fmt(g.q,2)} kPa</b> (carga del relleno, no presión de contacto)`;}
   $("eLabX").textContent=terr?"x (desde el eje del terraplén)":"x (desde el centro, en dirección de B)";
   $("eSubAt").textContent=terr?"Puntos del ejercicio (toca uno)":"Puntos del tablero";
+  {const n=$("eVincNota"),ac=$("eAtajosCap"),ci=capInfo;
+    if(!ci||E.forma==="terr"){n.hidden=!(vincE()&&E.forma==="terr");n.textContent=E.forma==="terr"?"El terraplén no se vincula con Capacidad de carga (no es una zapata).":"";ac.innerHTML="";}
+    else{n.hidden=false;
+      n.textContent=`Forma, B, L y P vienen de Capacidad de carga. z se mide desde el sello (D_f = ${fmt(ci.Df,2)} m). Boussinesq supone suelo homogéneo: los estratos no cambian Δσ.`+(ci.eB>0||ci.eL>0?" La excentricidad no se traslada: aquí la carga va centrada.":"");
+      const ch=[];if(ci.dos&&ci.e1>ci.Df+1e-9)ch.push([ci.e1-ci.Df,`z = contacto S1–S2 = e₁ − D_f = ${fmt(ci.e1-ci.Df,2)} m`]);
+      if(ci.tres&&ci.e1+ci.e2>ci.Df+1e-9)ch.push([ci.e1+ci.e2-ci.Df,`z = contacto S2–S3 = ${fmt(ci.e1+ci.e2-ci.Df,2)} m`]);
+      ac.innerHTML=ch.length?`<p class="sub" style="margin:8px 0 2px">Del ejercicio de capacidad</p>`+ch.map(([z,t])=>`<button class="chip" data-zc="${z}" aria-pressed="${Math.abs(E.z-z)<1e-6}">${t}</button>`).join(""):"";}}
   const tc=E.forma==="terr"?"Centrar el punto en el eje (x = 0) · dos mitades iguales":E.vista==="newmark"?"Centrar la zapata en la carta (punto bajo la carga P)":(E.forma==="corr"?"Centrar el punto en el eje (x = 0)":(E.forma==="circ"?"Centrar el punto bajo la carga P (centro del círculo)":"Centrar el punto · dividir en 4 rectángulos iguales"));
   $("eCentrar").textContent="⊕ "+tc;
   $("ef_L").style.display=E.forma==="rect"?"":"none";$("ef_y").style.display=E.forma==="corr"||terr?"none":"";
@@ -3705,7 +3743,11 @@ function render(){pend=false;if(modulo!=="esf")return;
   const nuevos=construirPasos(r),firma=JSON.stringify(nuevos.map(p=>p.h));
   if(firma!==firmaPasos){firmaPasos=firma;pasos=nuevos;actual=0;mostrarPasos(true);jugar(true);}else mostrarPasos();
 }
-const cambio=()=>{programar();guardar();};
+let desdeVinculo=false,capInfo=null;
+const vincE=()=>{try{return localStorage.getItem("vinculo.v1")!=="0";}catch(e){return true;}};
+const compartidoE=()=>({forma:E.forma,B:E.B,L:E.forma==="rect"?E.L:E.B,P:E.modoQ==="P"?E.P:E.q*area()});
+/* lo que se cambie en esta pestaña (forma, B, L, P) pasa a Capacidad de carga si está vinculado; el terraplén no */
+const cambio=()=>{programar();guardar();if(!desdeVinculo&&vincE()&&E.forma!=="terr"&&window.MZ&&MZ.aplicar)MZ.aplicar(compartidoE());};
 if(window.MZB)MZB.cuandoListo(()=>programar());   // al detectar el servidor Python se recalcula para mostrar su verificación
 ["B","L","q","P","x","y","z","tc","tH","tt","tg"].forEach(k=>{$("er_"+k).addEventListener("input",e=>{E[k]=+e.target.value;cambio();});
   $("en_"+k).addEventListener("change",e=>{const v=parseFloat(String(e.target.value).replace(",","."));if(isFinite(v)){E[k]=v;cambio();}});});
@@ -3715,6 +3757,7 @@ seg("eForma",v=>{E.forma=v;if(v==="terr")E.metodo="abaco";E.vista=VISTAS_DE[v][0
 const centrar=()=>{E.x=0;E.y=0;cambio();};
 $("eCentrar").addEventListener("click",centrar);
 $("eVistas").addEventListener("click",e=>{if(e.target.closest("#eCentrar2")){e.stopPropagation();centrar();}},true);
+$("eAtajosCap").addEventListener("click",e=>{const b=e.target.closest("[data-zc]");if(!b)return;E.z=Math.round(+b.dataset.zc*1000)/1000;cambio();});
 $("eAtajos").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.tp!=null){const p=E.tpts[+b.dataset.tp];E.x=p.x;E.z=p.z;cambio();return;}
   if(E.forma!=="corr"){E.forma="rect";E.B=3;E.L=4;}else E.B=3;E.q=200;E.P=Math.round(200*(E.forma==="corr"?3:12));E.x=+b.dataset.x;E.y=+b.dataset.y;E.z=+b.dataset.z;cambio();});
@@ -3760,7 +3803,16 @@ function tablaInforme(r){
       return `<td class="${u?"vec":""}">${fmt(v,4)}${u?`<sup>${u.join(",")}</sup>`:""}</td>`;}).join("")}</tr>`).join("")+`</table>
     <table class="t13det"><tr><th>Rect.</th><th>m y n</th><th>Entre</th><th>Interpolación</th></tr>${det.join("")}</table>`;
 }
-window.ESFI={informe:()=>({E:JSON.parse(JSON.stringify(E)),r:ultimoR,pasos:pasos.map(p=>({t:p.t,h:p.h})),link:null,
+/* recibe el ejercicio de Capacidad de carga (o null al desactivar el vínculo) */
+const aplicarDesdeCap=o=>{capInfo=o&&vincE()?o:null;
+  if(!capInfo||E.forma==="terr"){programar();return;}
+  let c=false;
+  if(o.forma&&o.forma!==E.forma){E.forma=o.forma;E.vista=VISTAS_DE[o.forma][0];if(!METODOS_DE[E.forma].includes(E.metodo))E.metodo="tabla";c=true;}
+  if(o.B>0&&Math.abs(o.B-E.B)>1e-9){E.B=o.B;c=true;}
+  if(E.forma==="rect"&&o.L>0&&Math.abs(o.L-E.L)>1e-9){E.L=o.L;c=true;}
+  if(o.P>0){if(E.modoQ!=="P"){E.modoQ="P";c=true;}if(Math.abs(o.P-E.P)>1e-6){E.P=o.P;c=true;}}
+  if(c){desdeVinculo=true;cambio();desdeVinculo=false;}else programar();};
+window.ESFI={aplicar:aplicarDesdeCap,informe:()=>({E:JSON.parse(JSON.stringify(E)),r:ultimoR,pasos:pasos.map(p=>({t:p.t,h:p.h})),link:null,
   tabla:E.forma==="terr"?`<div class="ttab">${tablaTerr(true)}</div>`:tablaInforme(ultimoR),tituloTabla:E.forma==="terr"?"Tabla de puntos — mitades, a/z, b/z, I y Δσz":"Tabla 13 — celdas usadas e interpolación",
   terr:E.forma==="terr"?geomT():null})};
 new MutationObserver(()=>programar()).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
