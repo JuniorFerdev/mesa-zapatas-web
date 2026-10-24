@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610211549";
+window.APP_VER="202610241719";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -95,6 +95,10 @@ header .acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-l
 .chipPy{display:inline-block;margin:4px 0 2px;font:500 11.5px var(--fm);padding:3px 8px;border-radius:7px;border:1px solid var(--linea2);background:var(--panel2);color:var(--tinta2)}
 .chipPy.ok{border-color:#9FCBAE;background:#EAF5EE;color:#1E6B3B}.chipPy.mal{border-color:#E3A69E;background:#FBECEA;color:var(--falla)}
 .chipPy[hidden]{display:none}
+.numIn{width:74px;font:inherit;font-family:var(--fm);font-size:13px;text-align:right;padding:3px 6px;border:1px solid var(--linea2);border-radius:7px;background:var(--panel2);color:var(--tinta)}
+.row2 .numIn{width:62px}
+.numIn:disabled{opacity:.5}
+.avisoG{margin:4px 0 8px;font-size:11.5px;color:var(--medio)}.avisoG[hidden]{display:none}
 .tabsDatos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--panel2);border:1px solid var(--linea2);border-radius:14px 14px 0 0;overflow:hidden;margin-bottom:-12px;position:relative;z-index:1}
 .tabsDatos button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--tinta2);padding:9px 4px 7px;cursor:pointer;border-bottom:2.5px solid transparent;min-width:0}
 .tabsDatos button small{display:none;font-weight:400;font-size:10.5px;color:var(--tinta3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
@@ -504,12 +508,13 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
       <div class="seg full" id="segTipoS" role="group" aria-label="Tipo de suelo" style="margin-bottom:10px">
         <button data-v="granular">granular (c = 0)</button><button data-v="fino">arcilla (φ = 0)</button><button data-v="mixto">c–φ (limo / drenado)</button>
       </div>
-      <div class="fld"><div class="lab"><span>Fricción φ</span><b><span id="v_phi"></span>°</b></div><input type="range" id="r_phi" min="0" max="45" step="0.5"></div>
-      <div class="fld"><div class="lab"><span>Cohesión c (S<sub>u</sub> si φ = 0)</span><b><span id="v_c"></span> kPa</b></div><input type="range" id="r_c" min="0" max="200" step="1"></div>
+      <div class="fld"><div class="lab"><span>Fricción φ</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_phi" step="0.5"> °</b></div><input type="range" id="r_phi" min="0" max="45" step="0.5"></div>
+      <div class="fld"><div class="lab"><span>Cohesión c (S<sub>u</sub> si φ = 0)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_c" step="1"> kPa</b></div><input type="range" id="r_c" min="0" max="200" step="1"></div>
       <div class="row2">
-        <div class="fld"><div class="lab"><span>γ húmedo</span><b id="v_gm"></b></div><input type="range" id="r_gm" min="12" max="23" step="0.1"></div>
-        <div class="fld"><div class="lab"><span>γ saturado</span><b id="v_gs"></b></div><input type="range" id="r_gs" min="14" max="24" step="0.1"></div>
+        <div class="fld"><div class="lab"><span>γ húmedo</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_gm" step="0.1"> kN/m³</b></div><input type="range" id="r_gm" min="12" max="23" step="0.1"></div>
+        <div class="fld"><div class="lab"><span>γ saturado</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_gs" step="0.1"> kN/m³</b></div><input type="range" id="r_gs" min="14" max="24" step="0.1"></div>
       </div>
+      <p class="avisoG" id="avisoGamma" hidden></p>
       <div id="bloqueMet">
         <div class="sep"></div>
         <p class="sub">Método para el caso A-II (estrato débil dentro de la zona crítica)</p>
@@ -522,7 +527,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     </div></section>
 
   <section class="card" data-tog="agua" data-pan="agua"><h2><button class="tog" aria-expanded="true">Nivel freático</button><span class="resumen" id="rs_agua"></span></h2><div class="body">
-    <div class="fld"><div class="lab"><span>Profundidad d<sub>nf</sub></span><b><span id="v_dnf"></span> m</b></div><input type="range" id="r_dnf" min="-3" max="25" step="0.05"></div>
+    <div class="fld"><div class="lab"><span>Profundidad d<sub>nf</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_dnf" step="0.05"> m</b></div><input type="range" id="r_dnf" min="-3" max="25" step="0.05"></div>
     <div class="chips" id="presetNF">
       <button class="chip" data-nf="inund">inundado</button><button class="chip" data-nf="grade">en el terreno</button>
       <button class="chip" data-nf="base">en el desplante</button><button class="chip" data-nf="fuera">fuera de la zona</button>
@@ -535,19 +540,19 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   </div></section>
 
   <section class="card" data-tog="carga" data-pan="carga"><h2><button class="tog" aria-expanded="true">Carga</button><span class="resumen" id="rs_carga"></span></h2><div class="body">
-    <div class="fld"><div class="lab"><span id="labQ">Carga de servicio P</span><b><span id="v_Q"></span></b></div><input type="range" id="r_Q" min="0" max="40000" step="10"></div>
-    <div class="fld"><div class="lab"><span>Inclinación θ</span><b><span id="v_th"></span>°</b></div><input type="range" id="r_th" min="0" max="45" step="0.5"></div>
+    <div class="fld"><div class="lab"><span id="labQ">Carga de servicio P</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_Q" step="10"> <span id="u_Q">kN</span></b></div><input type="range" id="r_Q" min="0" max="40000" step="10"></div>
+    <div class="fld"><div class="lab"><span>Inclinación θ</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_th" step="0.5"> °</b></div><input type="range" id="r_th" min="0" max="45" step="0.5"></div>
     <div class="sep"></div>
     <div class="seg full" id="segExc" role="group" aria-label="Excentricidad" style="margin-bottom:9px">
       <button data-v="e">dar e</button><button data-v="M">dar M (e = M/P)</button>
     </div>
     <div id="bloqE">
-      <div class="fld"><div class="lab"><span>e<sub>B</sub></span><b><span id="v_eB"></span> m</b></div><input type="range" id="r_eB" min="0" max="5" step="0.005"></div>
-      <div class="fld" id="f_eL"><div class="lab"><span>e<sub>L</sub></span><b><span id="v_eL"></span> m</b></div><input type="range" id="r_eL" min="0" max="5" step="0.005"></div>
+      <div class="fld"><div class="lab"><span>e<sub>B</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_eB" step="0.01"> m</b></div><input type="range" id="r_eB" min="0" max="5" step="0.005"></div>
+      <div class="fld" id="f_eL"><div class="lab"><span>e<sub>L</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_eL" step="0.01"> m</b></div><input type="range" id="r_eL" min="0" max="5" step="0.005"></div>
     </div>
     <div id="bloqM">
-      <div class="fld"><div class="lab"><span>M<sub>B</sub></span><b><span id="v_MB"></span> kN·m</b></div><input type="range" id="r_MB" min="0" max="20000" step="5"></div>
-      <div class="fld" id="f_ML"><div class="lab"><span>M<sub>L</sub></span><b><span id="v_ML"></span> kN·m</b></div><input type="range" id="r_ML" min="0" max="20000" step="5"></div>
+      <div class="fld"><div class="lab"><span>M<sub>B</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_MB" step="5"> kN·m</b></div><input type="range" id="r_MB" min="0" max="20000" step="5"></div>
+      <div class="fld" id="f_ML"><div class="lab"><span>M<sub>L</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_ML" step="5"> kN·m</b></div><input type="range" id="r_ML" min="0" max="20000" step="5"></div>
     </div>
     <p class="note" id="noteExc"></p>
   </div></section>
@@ -634,9 +639,9 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   <section class="card" data-tog="pond"><h2><button class="tog" aria-expanded="true">Ponderados de profundidad</button><span class="resumen" id="rs_pond"></span></h2><div class="body pond" id="o_pond"></div></section>
   <section class="card" data-tog="verif"><h2><button class="tog" aria-expanded="true">Verificaciones</button><span class="resumen" id="rs_verif"></span></h2><div class="body" id="o_chk" style="padding-top:4px"></div></section>
   <section class="card" id="cardEst" data-tog="estab"><h2><button class="tog" aria-expanded="true">Flotación y volcamiento</button><span class="resumen" id="rs_estab"></span></h2><div class="body">
-    <div class="fld"><div class="lab"><span>Espesor de la losa t</span><b><span id="v_t"></span> m</b></div><input type="range" id="r_t" min="0.2" max="4" step="0.05"></div>
-    <div class="fld"><div class="lab"><span id="labBp">Pedestal b<sub>p</sub></span><b><span id="v_bp"></span> m</b></div><input type="range" id="r_bp" min="0.2" max="10" step="0.05"></div>
-    <div class="fld"><div class="lab"><span>γ del concreto</span><b><span id="v_gc"></span> kN/m³</b></div><input type="range" id="r_gc" min="22" max="25" step="0.5"></div>
+    <div class="fld"><div class="lab"><span>Espesor de la losa t</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_t" step="0.05"> m</b></div><input type="range" id="r_t" min="0.2" max="4" step="0.05"></div>
+    <div class="fld"><div class="lab"><span id="labBp">Pedestal b<sub>p</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_bp" step="0.05"> m</b></div><input type="range" id="r_bp" min="0.2" max="10" step="0.05"></div>
+    <div class="fld"><div class="lab"><span>γ del concreto</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="v_gc" step="0.5"> kN/m³</b></div><input type="range" id="r_gc" min="22" max="25" step="0.5"></div>
     <div class="pond" id="o_est"></div>
   </div></section>
   <section class="card" data-tog="dev"><h2><button class="tog" aria-expanded="true">Desarrollo</button><span class="resumen" id="rs_dev"></span><button class="btnmini" id="btnCopy">copiar</button></h2><div class="body"><div id="dev"></div></div></section>
@@ -2652,20 +2657,24 @@ function sinc(){
   $("r_phi").disabled=a.tipo==="fino";$("r_c").disabled=a.tipo==="granular";
   $("r_phi").closest(".fld").dataset.fijo=a.tipo==="fino"?"Arcilla en condición no drenada: φ = 0 (se trabaja con c = S_u).":"";
   $("r_c").closest(".fld").dataset.fijo=a.tipo==="granular"?"Suelo granular: no tiene cohesión, c = 0.":"";
-  $("r_phi").value=a.phi;$("v_phi").textContent=fmt(a.phi,1);$("r_c").value=a.c;$("v_c").textContent=fmt(a.c,0);
-  $("r_gm").value=a.gm;$("v_gm").textContent=fmt(a.gm,1);$("r_gs").value=a.gsat;$("v_gs").textContent=fmt(a.gsat,1);
-  $("r_dnf").value=S.dnf;$("v_dnf").textContent=fmt(S.dnf,2);
+  /* cajas de número junto a cada deslizador: no se pisan mientras se escribe en ellas */
+  const pv=(id,v,dec)=>{const e=$(id);if(e&&document.activeElement!==e)e.value=(+v).toFixed(dec).replace(".",",");};
+  $("r_phi").value=a.phi;pv("v_phi",a.phi,1);$("r_c").value=a.c;pv("v_c",a.c,1);
+  $("v_phi").disabled=a.tipo==="fino";$("v_c").disabled=a.tipo==="granular";
+  $("r_gm").value=a.gm;pv("v_gm",a.gm,2);$("r_gs").value=a.gsat;pv("v_gs",a.gsat,2);
+  {const w=$("avisoGamma");w.hidden=!(a.gsat<a.gm);w.textContent=a.gsat<a.gm?`Ojo: γ saturado (${fmt(a.gsat,2)}) es menor que γ húmedo (${fmt(a.gm,2)}). Normalmente γ_sat ≥ γ; revisa el enunciado.`:"";}
+  $("r_dnf").value=S.dnf;pv("v_dnf",S.dnf,2);
   const GZ=geoZap();
-  $("r_t").max=Math.max(S.Df,0.2).toFixed(2);$("r_t").value=GZ.t;$("v_t").textContent=fmt(GZ.t);
-  $("r_bp").max=Math.min(S.B,S.tipo==="rectangular"?S.L:S.B).toFixed(2);$("r_bp").value=GZ.bp;$("v_bp").textContent=fmt(GZ.bp);
+  $("r_t").max=Math.max(S.Df,0.2).toFixed(2);$("r_t").value=GZ.t;pv("v_t",GZ.t,2);
+  $("r_bp").max=Math.min(S.B,S.tipo==="rectangular"?S.L:S.B).toFixed(2);$("r_bp").value=GZ.bp;pv("v_bp",GZ.bp,2);
   $("labBp").innerHTML=S.tipo==="circular"?"Pedestal, diámetro b<sub>p</sub>":(S.tipo==="corrida"?"Muro o pedestal, ancho b<sub>p</sub>":"Pedestal, lado b<sub>p</sub>");
-  $("r_gc").value=S.gc;$("v_gc").textContent=fmt(S.gc,1);
-  $("r_th").value=S.theta;$("v_th").textContent=fmt(S.theta,1);
-  $("r_Q").value=S.Q;$("v_Q").textContent=fmt(S.Q,0)+(S.tipo==="corrida"?" kN/m":" kN");
+  $("r_gc").value=S.gc;pv("v_gc",S.gc,1);
+  $("r_th").value=S.theta;pv("v_th",S.theta,1);
+  $("r_Q").value=S.Q;pv("v_Q",S.Q,0);$("u_Q").textContent=S.tipo==="corrida"?"kN/m":"kN";
   $("labQ").textContent=S.tipo==="corrida"?"Carga de servicio P (por metro)":"Carga de servicio P";
   $("r_eB").max=(S.B*0.49).toFixed(2);$("r_eL").max=(S.L*0.49).toFixed(2);
-  $("r_eB").value=S.eB;$("v_eB").textContent=fmt(S.eB,3);$("r_eL").value=S.eL;$("v_eL").textContent=fmt(S.eL,3);
-  $("r_MB").value=S.MB;$("v_MB").textContent=fmt(S.MB,0);$("r_ML").value=S.ML;$("v_ML").textContent=fmt(S.ML,0);
+  $("r_eB").value=S.eB;pv("v_eB",S.eB,3);$("r_eL").value=S.eL;pv("v_eL",S.eL,3);
+  $("r_MB").value=S.MB;pv("v_MB",S.MB,0);$("r_ML").value=S.ML;pv("v_ML",S.ML,0);
   const biax=S.tipo==="cuadrada"||S.tipo==="rectangular";
   $("f_eL").style.display=biax?"":"none";$("f_ML").style.display=biax?"":"none";
   $("bloqE").style.display=S.modoExc==="e"?"":"none";$("bloqM").style.display=S.modoExc==="M"?"":"none";
@@ -2723,7 +2732,15 @@ const cambioRapido=()=>{rapido=true;programar();clearTimeout(tFino);tFino=setTim
   .forEach(([id,k])=>$(id).addEventListener("input",e=>{S[k]=+e.target.value;if(k==="B"||k==="Df"||k==="e1")S.zc=null;cambioRapido();}));
 [["n_B","B"],["n_L","L"],["n_Df","Df"],["n_e1","e1"],["n_e2","e2"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{const v=+e.target.value;if(isFinite(v)&&v>0){S[k]=v;S.zc=null;cambio();}}));
 [["r_phi","phi"],["r_c","c"],["r_gm","gm"],["r_gs","gsat"]].forEach(([id,k])=>$(id).addEventListener("input",e=>{
-  const o=act();o[k]=+e.target.value;if(k==="gm"&&o.gsat<o.gm)o.gsat=o.gm;if(k==="gsat"&&o.gsat<o.gm)o.gm=o.gsat;cambioRapido();}));
+  const o=act();o[k]=+e.target.value;cambioRapido();}));   // γ y γ_sat independientes (si γ_sat < γ solo se avisa)
+/* cajas de número: se escribe el valor exacto (acepta coma o punto) */
+const leer=e=>{const v=parseFloat(String(e.target.value).replace(",","."));return isFinite(v)?v:null;};
+[["v_phi","phi",0,50],["v_c","c",0,1000],["v_gm","gm",5,30],["v_gs","gsat",5,30]].forEach(([id,k,lo,hi])=>$(id).addEventListener("change",e=>{
+  const v=leer(e);if(v==null)return;act()[k]=Math.min(hi,Math.max(lo,v));cambio();}));
+[["v_dnf","dnf"],["v_Q","Q"],["v_th","theta"],["v_eB","eB"],["v_eL","eL"],["v_MB","MB"],["v_ML","ML"],["v_gc","gc"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{
+  const v=leer(e);if(v==null)return;S[k]=v;if(k==="eB"||k==="eL")S.modoExc="e";if(k==="MB"||k==="ML")S.modoExc="M";S.zc=null;cambio();}));
+$("v_t").addEventListener("change",e=>{const v=leer(e);if(v!=null){S.tLosa=v;cambio();}});
+$("v_bp").addEventListener("change",e=>{const v=leer(e);if(v!=null){S.bPed=v;cambio();}});
 $("r_z").addEventListener("input",e=>{S.zc=+e.target.value;cambioRapido();});
 [["pDfa","a"],["pDfb","b"],["pDfp","p"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{const v=+e.target.value;if(isFinite(v)&&v>0){S.pDf[k]=v;cambio();}}));
 $("tablaDf").addEventListener("click",e=>{const tr=e.target.closest("tr[data-df]");if(!tr)return;S.Df=+tr.dataset.df;S.zc=null;cambio();});
@@ -2769,7 +2786,7 @@ function inactivos(R){
     if(k==="phi"&&S[a].phi===0)return "";
     return "No cambia q_u en esta configuración.";};
   const res={};
-  if(prueba(T=>{T[a].gm+=0.5;if(T[a].gsat<T[a].gm)T[a].gsat=T[a].gm;}))res.r_gm=porque("gm");
+  if(prueba(T=>{T[a].gm+=0.5;}))res.r_gm=porque("gm");
   if(prueba(T=>{T[a].gsat+=0.5;}))res.r_gs=porque("gsat");
   const so=S[a];
   if(so.tipo!=="fino"&&prueba(T=>{T[a].phi=Math.min(T[a].phi+2,45);}))res.r_phi=porque("phi");
