@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202610241727";
+window.APP_VER="202611170052";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -375,6 +375,12 @@ details.acc[open] summary::before{content:"− "}
 }
 /* módulo de incremento de esfuerzos */
 .etabla{overflow-x:auto;margin-top:8px}
+#mainAsen [hidden]{display:none!important}
+.etabla td.act{background:color-mix(in srgb,var(--falla) 12%,var(--panel));color:var(--tinta);font-weight:700}
+.chkLab{display:flex;gap:7px;align-items:center;font-size:12.5px;margin:4px 0 8px;color:var(--tinta2)}
+.filaCapa{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:4px;align-items:end;margin:0 0 6px;padding:6px;border:1px solid var(--linea2);border-radius:8px;font-size:11px;color:var(--tinta2)}
+.filaCapa label{display:flex;flex-direction:column;gap:2px}.filaCapa input[type=text]{width:100%;font:inherit;font-family:var(--fm);font-size:12px;padding:3px 4px;border:1px solid var(--linea);border-radius:5px;background:var(--panel);color:var(--tinta)}
+.filaCapa .ck{flex-direction:row;align-items:center;gap:4px}.filaCapa button{font:inherit;font-size:11px;border:1px solid var(--linea2);border-radius:5px;background:var(--panel);color:var(--tinta2);cursor:pointer;padding:3px 6px}
 .etabla table{border-collapse:collapse;font-family:var(--fm);font-size:11px;width:100%;font-variant-numeric:tabular-nums}
 .etabla th,.etabla td{padding:2px 4px;text-align:right;border:1px solid var(--linea2)}
 .etabla th{color:var(--tinta2);font-weight:600;background:var(--panel2)}
@@ -459,7 +465,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
   <nav class="seg modulos" id="segModulo" role="tablist" aria-label="Módulo">
     <button data-v="cap" role="tab"><i>▦</i><span>Capacidad de carga<small>zapatas · estratos · agua</small></span></button>
     <button data-v="esf" role="tab"><i>◭</i><span>Esfuerzos y terraplenes<small>Δσ bajo zapatas y rellenos</small></span></button>
-    <button data-v="asen" role="tab"><i>⇣</i><span>Asentamientos<small>próximamente</small></span></button>
+    <button data-v="asen" role="tab"><i>⇣</i><span>Asentamientos<small>elástico · consolidación</small></span></button>
   </nav>
   <div class="acciones">
     <button class="btnPri" id="btnAsist" title="Te guía pregunta por pregunta">Guía paso a paso</button>
@@ -656,13 +662,87 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 </div>
 
 <!-- ================= MÓDULO: INCREMENTO DE ESFUERZOS ================= -->
-<div class="main solo" id="mainAsen" hidden>
-  <section class="card proximo"><div class="body">
-    <div class="ico">⇣</div>
-    <h2>Asentamientos</h2>
-    <p>Este módulo está en construcción. Aquí irán el <b>asentamiento elástico</b> (E<sub>s</sub>, μ, factores de influencia) y el <b>asentamiento por consolidación</b> (C<sub>c</sub>, C<sub>s</sub>, e₀, OCR), con las tablas y correlaciones de la guía del curso.</p>
-    <p class="note">Mientras tanto usa <b>Capacidad de carga</b> o <b>Esfuerzos y terraplenes</b> (arriba).</p>
+<!-- ================= MÓDULO: ASENTAMIENTOS ================= -->
+<div class="main" id="mainAsen" hidden>
+<div class="col izq">
+  <nav class="tabsDatos" id="tabsAsen" role="tablist" aria-label="Datos del ejercicio">
+    <button data-t="metodo" role="tab">Método<small id="ats_metodo"></small></button><button data-t="zapata" role="tab">Zapata<small id="ats_zapata"></small></button><button data-t="suelo" role="tab">Suelo<small id="ats_suelo"></small></button>
+  </nav>
+  <section class="card" data-pan="metodo"><h2>Método</h2><div class="body">
+    <div class="seg full" id="aMetodo" role="group" aria-label="Método" style="margin-bottom:8px">
+      <button data-v="sb">Steinbrenner</button><button data-v="harr">Harr</button><button data-v="arc">arcilla c₁c₂</button><button data-v="sch">Schmertmann</button><button data-v="con">consolidación</button>
+    </div>
+    <p class="note" id="aMetNota"></p>
+    <div id="aSbBlk">
+      <p class="sub" style="margin:8px 0 4px">Punto</p>
+      <div class="seg full" id="aPunto" role="group" aria-label="Punto"><button data-v="c">centro</button><button data-v="bl">borde largo</button><button data-v="bc">borde corto</button><button data-v="e">esquina</button><button data-v="xy">otro (x, y)</button></div>
+      <div id="aXY" style="margin-top:8px">
+<div class="fld" id="af_x"><div class="lab"><span>x (desde el centro, en dirección de B)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_x"> m</b></div><input type="range" id="ar_x" min="-10" max="10" step="0.05"></div>
+<div class="fld" id="af_y"><div class="lab"><span>y (desde el centro, en dirección de L)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_y"> m</b></div><input type="range" id="ar_y" min="-10" max="10" step="0.05"></div>
+      </div>
+      <p class="sub" style="margin:10px 0 4px">F₁ y F₂</p>
+      <div class="seg full" id="aModoF" role="group" aria-label="F1 y F2"><button data-v="tabla">Tablas 14 y 15</button><button data-v="exacto">fórmula exacta</button></div>
+      <p class="note">Con tablas, F₁ y F₂ se interpolan linealmente (como a mano); sin roca se usa la última fila (n′ = 100).</p>
+    </div>
   </div></section>
+  <section class="card" data-pan="zapata"><h2>Zapata y carga</h2><div class="body">
+    <div class="seg full" id="aForma" role="group" aria-label="Forma" style="margin-bottom:10px"><button data-v="rect">rectangular</button><button data-v="cuad">cuadrada</button><button data-v="circ">circular</button></div>
+<div class="fld" id="af_B"><div class="lab"><span>Ancho B</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_B"> m</b></div><input type="range" id="ar_B" min="0.5" max="12" step="0.05"></div>
+<div class="fld" id="af_L"><div class="lab"><span>Largo L</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_L"> m</b></div><input type="range" id="ar_L" min="0.5" max="30" step="0.05"></div>
+<div class="fld" id="af_Df"><div class="lab"><span>Desplante D<sub>f</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_Df"> m</b></div><input type="range" id="ar_Df" min="0" max="10" step="0.05"></div>
+<div class="fld" id="af_q"><div class="lab"><span>Presión de contacto q<sub>cont</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_q"> kPa</b></div><input type="range" id="ar_q" min="10" max="1000" step="5"></div>
+    <p class="note">q<sub>cont</sub> es la presión que transmite la zapata (carga ÷ área). En consolidación se usa para Δσ bajo el centro.</p>
+  </div></section>
+  <section class="card" data-pan="suelo"><h2>Suelo</h2><div class="body">
+    <div id="aElBlk">
+<div class="fld" id="af_Es"><div class="lab"><span>Módulo E<sub>s</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_Es"> kPa</b></div><input type="range" id="ar_Es" min="1000" max="200000" step="500"></div>
+<div class="fld" id="af_mu"><div class="lab"><span>Relación de Poisson μ</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_mu"> </b></div><input type="range" id="ar_mu" min="0" max="0.5" step="0.01"></div>
+      <label class="chkLab"><input type="checkbox" id="aRoca"> hay roca (capa rígida) bajo la base</label>
+<div class="fld" id="af_H"><div class="lab"><span>Espesor H hasta la roca (desde la base)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_H"> m</b></div><input type="range" id="ar_H" min="0.2" max="60" step="0.1"></div>
+      <div id="aIfBlk"><label class="chkLab"><input type="checkbox" id="aIfMan"> I<sub>f</sub> leído por mí en la Fig. 16</label>
+<div class="fld" id="af_If"><div class="lab"><span>I<sub>f</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_If"> </b></div><input type="range" id="ar_If" min="0.5" max="1" step="0.005"></div>
+      </div>
+      <p class="note" id="aNotaSuelo"></p>
+    </div>
+    <div id="aSchBlk">
+<div class="fld" id="af_gam"><div class="lab"><span>γ del suelo sobre la base (q = γ·D<sub>f</sub>)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_gam"> kN/m³</b></div><input type="range" id="ar_gam" min="10" max="25" step="0.1"></div>
+<div class="fld" id="af_t"><div class="lab"><span>Tiempo t</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_t"> años</b></div><input type="range" id="ar_t" min="0.1" max="50" step="0.1"></div>
+      <p class="sub" style="margin:8px 0 4px">Capas bajo la base (espesor, E<sub>s</sub>)</p>
+      <div id="aCapas"></div>
+    </div>
+    <div id="aConBlk">
+<div class="fld" id="af_nf"><div class="lab"><span>Nivel freático (desde la superficie)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_nf"> m</b></div><input type="range" id="ar_nf" min="0" max="30" step="0.1"></div>
+      <p class="sub" style="margin:8px 0 4px">Estratos desde la superficie</p>
+      <div id="aEstr"></div>
+      <p class="sub" style="margin:10px 0 4px">Δσ en la arcilla (bajo el centro)</p>
+      <div class="seg full" id="aDsMet" role="group" aria-label="Δσ"><button data-v="boussinesq">Boussinesq</button><button data-v="2a1">2:1</button></div>
+      <div class="seg full" id="aDsProm" role="group" aria-label="Promedio" style="margin-top:6px"><button data-v="mitad">en la mitad</button><button data-v="simpson">promedio (Simpson)</button></div>
+      <p class="sub" style="margin:10px 0 4px">Tiempo y secundaria (opcional)</p>
+<div class="fld" id="af_cv"><div class="lab"><span>Coeficiente C<sub>v</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_cv"> cm²/s</b></div><input type="range" id="ar_cv" min="0.0005" max="0.05" step="0.0005"></div>
+<div class="fld" id="af_U"><div class="lab"><span>Grado de consolidación U</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_U"> %</b></div><input type="range" id="ar_U" min="1" max="99" step="1"></div>
+      <div class="seg full" id="aDren" role="group" aria-label="Drenaje"><button data-v="2">drena arriba y abajo</button><button data-v="1">drena por un lado</button></div>
+<div class="fld" id="af_ca"><div class="lab"><span>c<sub>α</sub> (secundaria)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_ca"> </b></div><input type="range" id="ar_ca" min="0" max="0.05" step="0.001"></div>
+<div class="fld" id="af_t100"><div class="lab"><span>t<sub>100</sub> (fin de la primaria)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_t100"> años</b></div><input type="range" id="ar_t100" min="0.1" max="20" step="0.1"></div>
+<div class="fld" id="af_dt"><div class="lab"><span>Δt después de t<sub>100</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="an_dt"> años</b></div><input type="range" id="ar_dt" min="0" max="50" step="0.5"></div>
+    </div>
+  </div></section>
+</div>
+<div class="col centro">
+  <section class="card stage">
+    <div class="seg" id="aCorte" role="group" aria-label="Corte" style="margin:2px 0 6px"><button data-v="B">corte por B</button><button data-v="L">corte por L</button><button data-v="plan">planta</button></div>
+    <svg class="dib" id="aSvg" viewBox="0 0 900 600" role="img" aria-label="Dibujo del asentamiento"></svg>
+    <div id="aTabla" class="ttab"></div>
+    <div id="aTablaF" class="etabla"></div>
+  </section>
+</div>
+<div class="col der">
+  <section class="card"><h2>Asentamiento <span id="aResTit"></span></h2>
+    <div class="qu"><div class="big"><span id="aRes">—</span> <span class="u">mm</span></div>
+      <div class="s" id="aResChip"></div><div class="chipPy" id="chipPyAsen" hidden></div></div>
+  </section>
+  <section class="card"><h2>Desarrollo paso a paso</h2><div class="body"><ol class="pasos" id="aPasos"></ol></div></section>
+  <section class="card"><h2>Verificaciones</h2><div class="body" id="aChk" style="padding-top:4px"></div></section>
+</div>
 </div>
 <div class="main" id="mainEsf" hidden>
 <div class="col izq">
@@ -757,6 +837,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     poner(get(clave,def));}
   tabs(document.getElementById("tabsCap"),"tabCap.v1","zapata");
   tabs(document.getElementById("tabsEsf"),"tabEsf.v1","forma");
+  tabs(document.getElementById("tabsAsen"),"tabAsen.v1","metodo");
   const ay=document.getElementById("btnAyuda"),pon=v=>{document.body.classList.toggle("ayuda",v);ay.setAttribute("aria-pressed",String(v));put("ayuda.v1",v?"1":"0");};
   ay.addEventListener("click",()=>pon(!document.body.classList.contains("ayuda")));pon(get("ayuda.v1","0")==="1");
 })();
@@ -1713,6 +1794,184 @@ const ESF=(function(){
     newmarkAnillos,VI,INF};
 })();
 if(typeof module!=="undefined")module.exports=ESF;
+
+/* =====================================================================
+   NÚCLEO — ASENTAMIENTOS (guía del Prof. Lucio Cruz, §12, págs. 37–45)
+   Sin DOM. Objeto ASEN; mismo cálculo que backend/python/.../asentamientos.py (paridad 1e-9).
+   Harr · Steinbrenner-Bowles (Tablas 14/15, I_f de Fox) · arcilla saturada c₁c₂ · Schmertmann ·
+   consolidación primaria (y tiempo) · secundaria. Unidades m y kPa; asentamientos en m.
+   ===================================================================== */
+const ASEN=(function(){
+  const E=(typeof module!=="undefined"&&typeof require!=="undefined")?require("./esfuerzos.js"):ESF;
+  const INF=Infinity,r3=v=>Math.round(v*1e3)/1e3;
+  function lineal(xs,ys,x){
+    if(x<=xs[0])return ys[0];
+    for(let i=0;i<xs.length-1;i++)if(x<=xs[i+1])return ys[i]+(x-xs[i])/(xs[i+1]-xs[i])*(ys[i+1]-ys[i]);
+    return ys[ys.length-1];
+  }
+
+  /* ---------- Harr (pág. 37) ---------- */
+  function alfaHarr(m1){const s=Math.sqrt(1+m1*m1);return (Math.log((s+m1)/(s-m1))+m1*Math.log((s+1)/(s-1)))/Math.PI;}
+  function harr(B,L,q,Es,mu){const a=alfaHarr(L/B),c=B*q/Es*(1-mu*mu)*a;return {alfa:a,m1:L/B,centro:c,esquina:c/2};}
+
+  /* ---------- Steinbrenner (págs. 38–40) ---------- */
+  function F1(m,n){
+    if(!(n>0))return 0;
+    if(n===INF)return (m*Math.log((1+Math.sqrt(m*m+1))/m)+Math.log(m+Math.sqrt(m*m+1)))/Math.PI;
+    const A0=m*Math.log((1+Math.sqrt(m*m+1))*Math.sqrt(m*m+n*n)/(m*(1+Math.sqrt(m*m+n*n+1))));
+    const A1=Math.log((m+Math.sqrt(m*m+1))*Math.sqrt(1+n*n)/(m+Math.sqrt(m*m+n*n+1)));
+    return (A0+A1)/Math.PI;
+  }
+  function F2(m,n){if(!(n>0)||n===INF)return 0;return n/(2*Math.PI)*Math.atan(m/(n*Math.sqrt(m*m+n*n+1)));}
+  const T_M=[1,1.2,1.4,1.6,1.8,2,2.5,3,3.5,4,4.5,5,6,7,8,9,10,25,50,100];
+  const T_N=[...Array.from({length:40},(_,k)=>0.25*(k+1)),20,50,100];
+  const TABLA14=T_N.map(n=>T_M.map(m=>r3(F1(m,n)))),TABLA15=T_N.map(n=>T_M.map(m=>r3(F2(m,n))));
+  function tramo(lista,v){
+    if(v<=lista[0])return [-1,0,v/lista[0]];
+    for(let i=0;i<lista.length-1;i++)if(v<=lista[i+1])return [i,i+1,(v-lista[i])/(lista[i+1]-lista[i])];
+    return [lista.length-1,lista.length-1,0];
+  }
+  /* lectura bilineal en la Tabla 14 o 15 con los pasos; n′ = ∞ → fila n′ = 100 (última de la tabla) */
+  function interpF(tabla,m,n){
+    const nn=n===INF?T_N[T_N.length-1]:n;
+    const [fi0,fi1,tr]=tramo(T_N,nn);let [c0,c1,tc]=tramo(T_M,m);
+    if(c0<0){c0=0;tc=0;}
+    const cel=(i,j)=>i<0?0:tabla[i][j];
+    const a=cel(fi0,c0),b=cel(fi0,c1),c=cel(fi1,c0),d=cel(fi1,c1),Fa=a+tc*(b-a),Fb=c+tc*(d-c);
+    return {F:Fa+tr*(Fb-Fa),fila:[fi0<0?0:T_N[fi0],T_N[fi1]],col:[T_M[c0],T_M[c1]],celdas:[a,b,c,d],tr,tc,Fa,Fb,nTabla:nn};
+  }
+
+  /* I_f de Fox (Fig. 16) regenerada con Mindlin (backend/python/tools/generar_fox.py) */
+  const FOX_NU=[0.3,0.4,0.5],FOX_LB=[1,2,5],FOX_DFB=[0.1,0.15,0.2,0.3,0.4,0.5,0.6,0.8,1.0,1.5,2.0];
+  const FOX={"0.3|1":[0.954,0.928,0.902,0.852,0.808,0.77,0.738,0.687,0.65,0.593,0.562],"0.3|2":[0.968,0.949,0.93,0.893,0.857,0.825,0.796,0.747,0.709,0.643,0.603],"0.3|5":[0.977,0.965,0.951,0.925,0.899,0.875,0.852,0.813,0.78,0.719,0.675],"0.4|1":[0.973,0.953,0.932,0.889,0.848,0.811,0.779,0.727,0.689,0.629,0.596],"0.4|2":[0.982,0.969,0.955,0.924,0.893,0.863,0.836,0.788,0.749,0.682,0.64],"0.4|5":[0.988,0.979,0.97,0.949,0.927,0.906,0.886,0.849,0.818,0.757,0.714],"0.5|1":[0.988,0.976,0.96,0.924,0.886,0.85,0.818,0.764,0.723,0.659,0.622],"0.5|2":[0.993,0.986,0.976,0.953,0.926,0.899,0.873,0.826,0.786,0.715,0.67],"0.5|5":[0.996,0.991,0.985,0.97,0.953,0.935,0.917,0.883,0.852,0.792,0.747]};
+  const LOG_DFB=FOX_DFB.map(Math.log10);
+  function ifFox(DfB,LB,nu){
+    const avisos=[];
+    if(!(DfB>0))return {If:1,avisos};
+    if(DfB>2)avisos.push("D_f/B > 2: fuera de la Fig. 16, se usa D_f/B = 2");
+    if(LB>5)avisos.push("L/B > 5: fuera de la Fig. 16, se usa la curva L/B = 5");
+    if(nu<0.3||nu>0.5)avisos.push("μ fuera de 0,3–0,5: se usa el panel más cercano");
+    const d=Math.min(DfB,2),lb=Math.min(Math.max(LB,1),5),v=Math.min(Math.max(nu,0.3),0.5);
+    const curva=(n,l)=>{const ys=FOX[n+"|"+l];
+      return d<FOX_DFB[0]?1+d/FOX_DFB[0]*(ys[0]-1):lineal(LOG_DFB,ys,Math.log10(d));};
+    const panel=n=>lineal(FOX_LB,FOX_LB.map(l=>curva(n,l)),lb);
+    const lecturas={};FOX_NU.forEach(n=>{lecturas[String(n)]=FOX_LB.map(l=>curva(n,l));});
+    return {If:lineal(FOX_NU,FOX_NU.map(panel),v),avisos,lecturas,DfB:d,LB:lb,nu:v};
+  }
+
+  function esquinaSB(b,l,H,q,Es,mu,modo="tabla"){
+    const Bp=Math.min(b,l),Lp=Math.max(b,l),m=Lp/Bp,n=H===INF?INF:H/Bp;
+    let t1=null,t2=null,f1,f2;
+    if(modo==="tabla"){t1=interpF(TABLA14,m,n);t2=interpF(TABLA15,m,n);f1=t1.F;f2=t2.F;}else{f1=F1(m,n);f2=F2(m,n);}
+    const Is=f1+(1-2*mu)/(1-mu)*f2;
+    return {Bp,Lp,m,n,F1:f1,F2:f2,Is,t1,t2,d:q*Bp/Es*(1-mu*mu)*Is};
+  }
+  /* S = {B, L, q, Es, mu, H (null/∞ sin roca), Df, If (null → Fig. 16), modo}; p = {x, y} */
+  function steinbrenner(S,p){
+    p=p||{x:0,y:0};
+    const B=S.B,L=S.L;let H=S.H;if(H==null||H===INF||H<=0)H=INF;
+    const modo=S.modo||"tabla",fox=ifFox((S.Df||0)/B,L/B,S.mu),If=S.If!=null?S.If:fox.If;
+    const dsc=E.descomponer(p,B,L),rects=[];let tot=0;
+    for(const r of dsc.rects){const e=esquinaSB(r.b,r.l,H,S.q,S.Es,S.mu,modo);e.alfa=r.signo;e.dIf=r.signo*e.d*If;tot+=e.dIf;rects.push(e);}
+    return {lugar:dsc.lugar,rects,If,fox,d:tot,H};
+  }
+  function perfilSB(S,eje="B",npts=41,ext=null){
+    const lado=eje==="B"?S.B:S.L;ext=ext||lado;const out=[];
+    for(let k=0;k<npts;k++){const s=-ext+2*ext*k/(npts-1);out.push([s,steinbrenner(S,eje==="B"?{x:s,y:0}:{x:0,y:s}).d]);}
+    return out;
+  }
+
+  /* ---------- Arcilla saturada (págs. 41–42) ---------- */
+  const C1_HB=[1,2,4,6,8,10,20,30];
+  const C1={circ:[0.36,0.47,0.58,0.61,0.62,0.63,0.64,0.66],1:[0.36,0.53,0.63,0.67,0.68,0.70,0.71,0.73],
+    2:[0.36,0.63,0.82,0.88,0.90,0.92,0.93,0.95],5:[0.36,0.64,0.94,1.08,1.13,1.18,1.26,1.29],
+    10:[0.36,0.64,0.94,1.14,1.22,1.30,1.47,1.54],inf:[0.36,0.64,0.94,1.16,1.26,1.42,1.74,1.84]};
+  const C2_DFB=[0,2,4,6,8,10,12,14,16,18,20],C2=[1.0,0.9,0.88,0.875,0.87,0.865,0.863,0.860,0.856,0.854,0.850];
+  function c1col(col,HB){const ys=C1[col];
+    if(HB<1)return HB>0.1?Math.max(0,ys[0]*(Math.log10(HB)+1)):0;
+    return lineal(C1_HB,ys,HB);}
+  function c1c2(B,L,H,Df,forma="rect"){
+    const avisos=[];let HB=(H!=null&&H!==INF&&H>0)?H/B:INF;
+    if(HB===INF||HB>30){avisos.push("H/B > 30 (o sin capa rígida): se usa la fila H/B = 30");HB=30;}
+    if(HB<1)avisos.push("H/B < 1: fuera de la tabla, se lee en la Fig. 18 (0 en H/B = 0,1)");
+    let c1,lb=null;
+    if(forma==="circ")c1=c1col("circ",HB);
+    else{lb=L/B;
+      if(lb===INF||lb>=10){const t=lb===INF?1:(1/10-1/lb)/(1/10);c1=c1col(10,HB)+t*(c1col("inf",HB)-c1col(10,HB));}
+      else{const xs=[1,2,5,10];c1=lineal(xs,xs.map(x=>c1col(x,HB)),lb);}}
+    const DfB=Df/B;if(DfB>20)avisos.push("D_f/B > 20: se usa c₂ = 0,85");
+    return {c1,c2:lineal(C2_DFB,C2,DfB),HB,LB:lb,DfB,avisos};
+  }
+  function arcilla(S){const r=c1c2(S.B,S.L??S.B,S.H,S.Df||0,S.forma||"rect");r.d=r.c1*r.c2*S.q*S.B/S.Es;return r;}
+
+  /* ---------- Schmertmann (pág. 43) ---------- */
+  function izSchmertmann(z,B,LB){
+    const i1=zz=>zz<=0.5*B?0.1+0.8*zz/B:Math.max(0,-zz/(3*B)+2/3);
+    const i10=zz=>zz<=B?0.2+0.3*zz/B:Math.max(0,-zz/(6*B)+2/3);
+    const t=Math.min(Math.max((LB-1)/9,0),1);return (1-t)*i1(z)+t*i10(z);
+  }
+  function z2Schmertmann(B,LB){const t=Math.min(Math.max((LB-1)/9,0),1);return B*(2+2*t);}
+  function schmertmann(S){
+    const B=S.B,LB=(S.L??S.B)/S.B,q=S.qs!=null?S.qs:(S.gamma||0)*(S.Df||0),qb=S.qc,z2=z2Schmertmann(B,LB);
+    const quiebres=[0.5*B,B,2*B,4*B],filas=[];let z=0,suma=0;
+    for(let k=0;k<S.capas.length;k++){const c=S.capas[k],z0=z,z1=z+c.h;z=z1;if(z0>=z2)break;const tope=Math.min(z1,z2);
+      const cortes=[...new Set([z0,tope,...quiebres.filter(x=>z0<x&&x<tope)])].sort((a,b)=>a-b);
+      for(let i=0;i<cortes.length-1;i++){const a=cortes[i],b=cortes[i+1];if(b-a<1e-12)continue;
+        const zm=(a+b)/2,iz=izSchmertmann(zm,B,LB),v=iz/c.Es*(b-a);suma+=v;
+        filas.push({capa:k+1,z0:a,z1:b,dz:b-a,zm,Es:c.Es,Iz:iz,IzEs:v});}}
+    const neta=qb-q,C1=neta>0?1-0.5*q/neta:0,t=S.t??0.1,C2=t>0.1?1+0.2*Math.log10(t/0.1):1,avisos=[];
+    if(z<z2-1e-9)avisos.push(`las capas llegan a ${z.toFixed(2)} m y z₂ = ${z2.toFixed(2)} m: falta suelo por debajo`.replace(/\./g,","));
+    return {q,neta,C1,C2,z2,filas,suma,d:C1*C2*neta*suma,avisos};
+  }
+
+  /* ---------- Consolidación (págs. 44–45) ---------- */
+  function consolidacionCapa(H,e0,Cc,Cs,s0,sc,ds){
+    const sf=s0+ds;let caso,de;
+    if(sc==null||sc<=s0*(1+1e-9)){caso="NC";de=Cc*Math.log10(sf/s0);}
+    else if(sf<=sc){caso="SC (σ′f ≤ σ′c)";de=Cs*Math.log10(sf/s0);}
+    else{caso="SC (σ′f > σ′c)";de=Cs*Math.log10(sc/s0)+Cc*Math.log10(sf/sc);}
+    return {caso,sf,de,d:H*de/(1+e0)};
+  }
+  function sigmaV(estratos,nf,z){
+    let s=0,top=0;
+    for(const e of estratos){const bot=top+e.h;if(z<=top)break;
+      const a=top,b=Math.min(z,bot),seco=Math.max(0,Math.min(b,nf)-a);
+      s+=e.gm*seco+(e.gsat??e.gm)*(b-a-seco);top=bot;}
+    if(z>top){const e=estratos[estratos.length-1],a=top,seco=Math.max(0,Math.min(z,nf)-a);s+=e.gm*seco+(e.gsat??e.gm)*(z-a-seco);}
+    const u=9.81*Math.max(0,z-nf);return {sv:s,u,sve:s-u};
+  }
+  function dsCentro(B,L,q,zf,metodo="boussinesq",forma="rect"){
+    if(zf<=0)return q;
+    if(metodo==="2a1")return E.metodo21(B,L,zf,q);
+    if(forma==="circ")return E.fang(B/2,zf,q);
+    if(L===INF)return E.corrida(B,0,zf,q);
+    return E.dsRectIdx({x:0,y:0},B,L,zf,q);
+  }
+  function consolidacion(S){
+    const filas=[],B=S.B,L=S.L??S.B,Df=S.Df||0,nf=S.nf??INF;let top=0,tot=0;
+    S.estratos.forEach((e,k)=>{let a=top,b=top+e.h;top=b;
+      if(!e.arcilla)return;a=Math.max(a,Df);if(b<=a)return;
+      const zm=(a+b)/2,s0=sigmaV(S.estratos,nf,zm).sve,f=z=>dsCentro(B,L,S.q,z-Df,S.metodo||"boussinesq",S.forma||"rect");
+      const dsm=f(zm);let dt=null,db=null,ds=dsm;
+      if(S.promedio==="simpson"){dt=f(a);db=f(b);ds=(dt+4*dsm+db)/6;}
+      const sc=e.sc!=null?e.sc:(e.OCR?e.OCR*s0:null);
+      const r=consolidacionCapa(b-a,e.e0,e.Cc,e.Cs||0,s0,sc,ds);
+      Object.assign(r,{estrato:k+1,z0:a,z1:b,H:b-a,zm,s0,sc,ds,dsm,dst:dt,dsb:db});tot+=r.d;filas.push(r);});
+    return {filas,d:tot};
+  }
+  const TV_U=[0,10,20,30,40,50,60,70,80,90,100],TV=[0,0.020,0.040,0.075,0.120,0.196,0.275,0.400,0.590,0.848,1.000];
+  function tvTeoria(U){const u=U/100;if(U<=60)return Math.PI/4*u*u;return U>=100?INF:1.781-0.933*Math.log10(100-U);}
+  function tiempo(U,Cv,Hd){const tv=lineal(TV_U,TV,U);return {Tv:tv,TvTeoria:tvTeoria(U),t:tv*Hd*Hd/Cv};}
+  function grado(t,Cv,Hd){const tv=Cv*t/(Hd*Hd);return {Tv:tv,U:lineal(TV,TV_U,tv)};}
+  function secundaria(H,ct,t100,dt,e100=null){
+    const ca=e100!=null?ct/(1+e100):ct,lg=Math.log10((t100+dt)/t100);return {ca,log:lg,d:H*ca*lg};
+  }
+
+  return {INF,alfaHarr,harr,F1,F2,T_M,T_N,TABLA14,TABLA15,interpF,FOX,FOX_NU,FOX_LB,FOX_DFB,ifFox,esquinaSB,steinbrenner,perfilSB,
+    C1,C1_HB,C2,C2_DFB,c1c2,arcilla,izSchmertmann,z2Schmertmann,schmertmann,consolidacionCapa,sigmaV,dsCentro,consolidacion,
+    TV_U,TV,tvTeoria,tiempo,grado,secundaria};
+})();
+if(typeof module!=="undefined")module.exports=ASEN;
 
 /* =====================================================================
    PUENTE CON EL BACKEND PYTHON (opcional)
@@ -2998,7 +3257,7 @@ function aplicarModulo(){
   const esf=modulo==="esf";
   $("mainCap").hidden=modulo!=="cap";$("mainEsf").hidden=!esf;$("mainAsen").hidden=modulo!=="asen";
   ["btnAsist","segMetodo"].forEach(id=>{const x=$(id);if(x)x.style.display=modulo==="cap"?"":"none";});
-  $("btnPDF").style.display=modulo==="asen"?"none":"";$("barraRes").hidden=modulo==="asen";
+  $("btnPDF").style.display="";
   if(modulo==="cap")window.dispatchEvent(new Event("resize"));
   document.querySelectorAll("#segModulo button").forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.v===modulo));b.setAttribute("aria-selected",String(b.dataset.v===modulo));});
   if(esf)programar();
@@ -3820,6 +4079,325 @@ aplicarModulo();
 })();
 
 /* =====================================================================
+   PESTAÑA «ASENTAMIENTOS» — interfaz (estado propio asen.v1). Usa ASEN (legacy-js/src/asentamientos.js).
+   Steinbrenner-Bowles (defecto, como la tarea) · Harr · arcilla saturada c₁c₂ · Schmertmann · consolidación.
+   ===================================================================== */
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const fmt=(x,n=2)=>(x==null||!isFinite(x)?"∞":(+x).toFixed(n).replace(".",","));
+const mm=v=>v*1000;
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a,tx)=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);if(tx!=null)n.textContent=tx;return n;};
+const V=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const txt=(g,x,y,s,o)=>{o=o||{};g.appendChild(el("text",Object.assign({x,y,fill:o.fill||V("--tinta2"),"font-size":o.fs||12,
+  "font-family":"IBM Plex Mono, monospace","text-anchor":o.anchor||"start","font-weight":o.fw||400,stroke:V("--panel"),"stroke-width":3.5,"paint-order":"stroke"}),s));};
+const num=v=>{const x=parseFloat(String(v).replace(",","."));return isFinite(x)?x:null;};
+
+/* ---------------- estado (por defecto: la tarea del tablero, 19 oct) ---------------- */
+const DEF={met:"sb",punto:"c",x:0,y:0,modoF:"tabla",forma:"rect",B:3,L:4,Df:0,q:250,Es:30000,mu:0.45,roca:false,H:5,ifMan:false,If:0.73,
+  gam:18,t:0.1,capas:[{h:2,Es:8000},{h:4,Es:12000}],nf:2,
+  estr:[{h:2,gm:18,gsat:20,arcilla:false},{h:4,gm:16,gsat:18,arcilla:true,e0:0.9,Cc:0.3,Cs:0.05,OCR:1}],
+  dsMet:"boussinesq",dsProm:"mitad",cv:0.005,U:90,dren:"2",ca:0,t100:1,dt:10,corte:"B"};
+let A=Object.assign({},DEF);
+try{const g=localStorage.getItem("asen.v1");if(g)A=Object.assign({},DEF,JSON.parse(g));}catch(e){}
+const guardar=()=>{try{localStorage.setItem("asen.v1",JSON.stringify(A));}catch(e){}};
+const Lr=()=>A.forma==="rect"?A.L:A.B;
+const NOMBRES={sb:"Steinbrenner-Bowles",harr:"Harr",arc:"arcilla saturada (c₁, c₂)",sch:"Schmertmann",con:"consolidación primaria"};
+const PUNTOS={c:"centro",bl:"borde largo",bc:"borde corto",e:"esquina",xy:"punto (x, y)"};
+const pDe=k=>({c:{x:0,y:0},bl:{x:A.B/2,y:0},bc:{x:0,y:Lr()/2},e:{x:A.B/2,y:Lr()/2},xy:{x:A.x,y:A.y}})[k];
+const Ssb=()=>({B:A.B,L:Lr(),q:A.q,Es:A.Es,mu:A.mu,H:A.roca?A.H:null,Df:A.Df,If:A.ifMan?A.If:null,modo:A.modoF});
+
+/* ---------------- cálculo ---------------- */
+function calcular(){
+  const r={met:A.met,avisos:[]};
+  if(A.met==="sb"){
+    const S=Ssb();r.S=S;r.p=pDe(A.punto);r.sb=ASEN.steinbrenner(S,r.p);r.d=r.sb.d;r.avisos.push(...r.sb.fox.avisos||[]);
+    r.filas=["c","bl","bc","e"].map(k=>({k,sb:ASEN.steinbrenner(S,pDe(k))}));
+    if(!A.roca&&A.Df<=0)r.harr=ASEN.harr(A.B,Lr(),A.q,A.Es,A.mu);
+  }else if(A.met==="harr"){
+    r.h=ASEN.harr(A.B,Lr(),A.q,A.Es,A.mu);r.esquina=A.punto==="e";r.d=r.esquina?r.h.esquina:r.h.centro;
+    if(A.Df>0)r.avisos.push("Harr supone D_f = 0: con desplante usa Steinbrenner (I_f)");
+    if(A.roca)r.avisos.push("Harr supone H = ∞: con roca usa Steinbrenner");
+    if(!["c","e"].includes(A.punto))r.avisos.push("Harr solo da centro y esquina: se muestra el centro");
+  }else if(A.met==="arc"){
+    r.S={B:A.B,L:Lr(),H:A.roca?A.H:null,Df:A.Df,q:A.q,Es:A.Es,forma:A.forma==="circ"?"circ":"rect"};r.a=ASEN.arcilla(r.S);r.d=r.a.d;r.avisos.push(...r.a.avisos);
+    if(Math.abs(A.mu-0.5)>1e-9)r.avisos.push("este método es para arcilla saturada (μ = 0,5); el μ dado no interviene");
+  }else if(A.met==="sch"){
+    r.S={B:A.B,L:Lr(),Df:A.Df,gamma:A.gam,qc:A.q,t:A.t,capas:A.capas};r.s=ASEN.schmertmann(r.S);r.d=r.s.d;r.avisos.push(...r.s.avisos);
+  }else{
+    r.S={B:A.B,L:Lr(),Df:A.Df,q:A.q,forma:A.forma==="circ"?"circ":"rect",nf:A.nf,estratos:A.estr,metodo:A.dsMet,promedio:A.dsProm==="simpson"?"simpson":null};
+    r.c=ASEN.consolidacion(r.S);r.dp=r.c.d;
+    /* tiempo con la capa de arcilla más gruesa; Cv en cm²/s → t en años */
+    const capa=r.c.filas.slice().sort((a,b)=>b.H-a.H)[0];
+    if(capa&&A.cv>0){const Hd=capa.H/(+A.dren)*100;r.tiempo=Object.assign(ASEN.tiempo(A.U,A.cv,Hd),{Hd:Hd/100,capa});r.tiempo.anos=r.tiempo.t/(3600*24*365);}
+    r.sec=A.ca>0&&A.dt>0?r.c.filas.map(f=>ASEN.secundaria(f.H,A.ca,A.t100,A.dt)):[];
+    r.ds=r.sec.reduce((s,x)=>s+x.d,0);r.d=r.dp+r.ds;
+    if(!r.c.filas.length)r.avisos.push("no hay estratos de arcilla bajo la base");
+  }
+  return r;
+}
+
+/* ---------------- dibujo ---------------- */
+const W=900,Hh=600;
+function base(svg){svg.innerHTML="";const g=el("g",{});svg.appendChild(g);return g;}
+function ejeSuelo(g,x0,x1,y,col){g.appendChild(el("rect",{x:x0,y,width:x1-x0,height:Hh-y-20,fill:col||V("--panel2")}));
+  g.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:V("--tinta3"),"stroke-width":1.5}));}
+function roca(g,x0,x1,y){g.appendChild(el("rect",{x:x0,y,width:x1-x0,height:Math.max(0,Hh-20-y),fill:V("--hormigon")}));
+  for(let x=x0;x<x1;x+=14)g.appendChild(el("line",{x1:x,y1:y+14,x2:x+14,y2:y,stroke:V("--tinta3"),"stroke-width":.8}));
+  txt(g,x1-8,y+18,"roca",{anchor:"end",fs:11});}
+function cota(g,x,y0,y1,t){g.appendChild(el("line",{x1:x,y1:y0,x2:x,y2:y1,stroke:V("--tinta3"),"stroke-width":1,"marker-start":"url(#fl)","marker-end":"url(#fl)"}));txt(g,x+6,(y0+y1)/2+4,t,{fs:11});}
+function flechas(svg){const d=el("defs",{}),m=el("marker",{id:"fl",viewBox:"0 0 10 10",refX:5,refY:5,markerWidth:6,markerHeight:6,orient:"auto-start-reverse"});
+  m.appendChild(el("path",{d:"M0,0 L10,5 L0,10 z",fill:V("--tinta3")}));d.appendChild(m);svg.appendChild(d);}
+
+/* corte con la deformada (Steinbrenner / Harr / arcilla) */
+function dibujarCorte(r){
+  const svg=$("aSvg"),g=base(svg);flechas(svg);
+  const porB=A.corte!=="L",lado=porB?A.B:Lr(),ext=Math.max(lado*1.6,lado/2+2);
+  const prof=Math.max(A.Df+(A.roca?A.H:lado*1.5)+0.5,A.Df+2);
+  const esc=Math.min((W-120)/(2*ext),(Hh-230)/prof),cx=W/2,ys=90,X=s=>cx+s*esc,Y=z=>ys+z*esc;
+  ejeSuelo(g,40,W-40,ys);
+  if(A.roca&&A.met!=="harr")roca(g,40,W-40,Y(A.Df+A.H));
+  /* zapata, columna y carga */
+  const yb=Y(A.Df);g.appendChild(el("rect",{x:X(-lado/2),y:yb-10,width:lado*esc,height:10,fill:V("--hormigon"),stroke:V("--tinta3")}));
+  if(A.Df>0)g.appendChild(el("rect",{x:cx-9,y:ys-30,width:18,height:yb-10-ys+30,fill:V("--hormigon"),stroke:V("--tinta3")}));
+  for(let k=0;k<=8;k++){const x=X(-lado/2+lado*k/8);g.appendChild(el("line",{x1:x,y1:yb-34,x2:x,y2:yb-13,stroke:V("--falla"),"stroke-width":1.4,"marker-end":"url(#fl)"}));}
+  txt(g,X(lado/2)+8,yb-24,`q = ${fmt(A.q,0)} kPa`,{fill:V("--falla"),fs:12});
+  txt(g,cx,ys-40,(porB?"corte por el ancho B":"corte por el largo L")+` = ${fmt(lado)} m`,{anchor:"middle",fs:12,fill:V("--tinta")});
+  if(A.Df>0)cota(g,X(-lado/2)-18,ys,yb,`Df ${fmt(A.Df)}`);
+  if(A.roca&&A.met!=="harr")cota(g,X(lado/2)+22,yb,Y(A.Df+A.H),`H ${fmt(A.H)}`);
+  /* deformada */
+  let pts=null;
+  if(A.met==="sb"||A.met==="harr"){const S=A.met==="harr"?{B:A.B,L:Lr(),q:A.q,Es:A.Es,mu:A.mu,H:null,Df:0,If:1,modo:"exacto"}:Ssb();
+    pts=ASEN.perfilSB(S,porB?"B":"L",61,ext);}
+  if(pts){const dmax=Math.max(...pts.map(p=>p[1]))||1,k=120/dmax,yd=yb+12;
+    const path=pts.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+","+(yd+p[1]*k).toFixed(1)).join(" ");
+    g.appendChild(el("line",{x1:X(-ext),y1:yd,x2:X(ext),y2:yd,stroke:V("--tinta3"),"stroke-dasharray":"4 4"}));
+    g.appendChild(el("path",{d:path,fill:"none",stroke:V("--agua2"),"stroke-width":2.5}));
+    const marca=(s,d,t)=>{g.appendChild(el("circle",{cx:X(s),cy:yd+d*k,r:4,fill:V("--falla")}));txt(g,X(s),yd+d*k+18,`${t} ${fmt(mm(d),1)}`,{anchor:"middle",fs:11,fill:V("--tinta")});};
+    const val=s=>A.met==="harr"?(Math.abs(s)<1e-9?r.h.centro:null):ASEN.steinbrenner(Ssb(),porB?{x:s,y:0}:{x:0,y:s}).d;
+    marca(0,val(0),"centro");
+    if(A.met==="sb"){marca(-lado/2,val(-lado/2),porB?"borde largo":"borde corto");marca(lado/2,val(lado/2),"");}
+    txt(g,X(-ext)+4,yd-6,"deformada (mm, escala exagerada)",{fs:11});
+  }else{txt(g,cx,yb+40,`δ centro = ${fmt(mm(r.d),1)} mm`,{anchor:"middle",fs:14,fill:V("--tinta"),fw:600});}
+}
+
+/* planta con los rectángulos de Steinbrenner (esquina común en el punto) */
+function dibujarPlanta(r){
+  const svg=$("aSvg"),g=base(svg),B=A.B,L=Lr(),p=r.p||{x:0,y:0};
+  const ext=Math.max(B,L)/2+Math.max(Math.abs(p.x),Math.abs(p.y))+0.5,esc=Math.min((W-80)/(2*ext),(Hh-80)/(2*ext)),cx=W/2,cy=Hh/2;
+  const X=x=>cx+x*esc,Y=y=>cy-y*esc;
+  g.appendChild(el("rect",{x:X(-B/2),y:Y(L/2),width:B*esc,height:L*esc,fill:V("--hormigon"),"fill-opacity":.35,stroke:V("--tinta"),"stroke-width":2}));
+  const dsc=ESF.descomponer(p,B,L),x0=-B/2,x1=B/2,y0=-L/2,y1=L/2;
+  for(const xa of [x1,x0])for(const yb of [y1,y0]){const sg=Math.sign(xa-p.x)*Math.sign(yb-p.y)*(xa===x1?1:-1)*(yb===y1?1:-1);
+    if(!sg)continue;const xm=Math.min(p.x,xa),ym=Math.max(p.y,yb);
+    g.appendChild(el("rect",{x:X(xm),y:Y(ym),width:Math.abs(xa-p.x)*esc,height:Math.abs(yb-p.y)*esc,fill:sg>0?V("--agua2"):V("--falla"),"fill-opacity":.10,stroke:sg>0?V("--agua2"):V("--falla"),"stroke-dasharray":"5 4"}));}
+  g.appendChild(el("circle",{cx:X(p.x),cy:Y(p.y),r:6,fill:V("--falla")}));
+  txt(g,X(p.x)+9,Y(p.y)-9,PUNTOS[A.punto],{fs:12,fill:V("--tinta"),fw:600});
+  txt(g,cx,Y(L/2)-10,`B = ${fmt(B)} m`,{anchor:"middle",fs:12});txt(g,X(B/2)+10,cy+4,`L = ${fmt(L)} m`,{fs:12});
+  txt(g,20,Hh-16,`rectángulos con esquina en el punto: ${dsc.rects.map(q=>(q.signo>0?"+":"")+q.signo+" × ("+fmt(q.b)+" × "+fmt(q.l)+")").join("  ")}`,{fs:11});
+}
+
+/* Schmertmann: capas y diagrama I_z */
+function dibujarSch(r){
+  const svg=$("aSvg"),g=base(svg);flechas(svg);const s=r.s,B=A.B,tot=A.capas.reduce((a,c)=>a+c.h,0);
+  const prof=Math.max(s.z2,tot)+A.Df+0.3,esc=(Hh-130)/prof,ys=70,Y=z=>ys+z*esc,yb=Y(A.Df);
+  ejeSuelo(g,40,W-40,ys);
+  let z=A.Df;A.capas.forEach((c,i)=>{const y0=Y(z),y1=Y(z+c.h);g.appendChild(el("rect",{x:40,y:y0,width:380,height:y1-y0,fill:i%2?V("--panel2"):V("--panel"),stroke:V("--linea2")}));
+    txt(g,50,(y0+y1)/2+4,`capa ${i+1}: ${fmt(c.h)} m · Es = ${fmt(c.Es,0)} kPa`,{fs:11});z+=c.h;});
+  const bw=Math.min(B*esc,220);g.appendChild(el("rect",{x:230-bw/2,y:yb-10,width:bw,height:10,fill:V("--hormigon"),stroke:V("--tinta3")}));
+  /* diagrama */
+  const x0=520,kx=600;g.appendChild(el("line",{x1:x0,y1:yb,x2:x0,y2:Y(A.Df+s.z2)+10,stroke:V("--tinta3")}));
+  const pts=[];for(let i=0;i<=80;i++){const zz=s.z2*i/80;pts.push([x0+ASEN.izSchmertmann(zz,B,Lr()/B)*kx,Y(A.Df+zz)]);}
+  g.appendChild(el("path",{d:"M"+x0+","+yb+" "+pts.map(p=>"L"+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")+" Z",fill:V("--agua2"),"fill-opacity":.15,stroke:V("--agua2"),"stroke-width":2}));
+  s.filas.forEach(f=>{const y=Y(A.Df+f.zm);g.appendChild(el("circle",{cx:x0+f.Iz*kx,cy:y,r:3.5,fill:V("--falla")}));txt(g,x0+f.Iz*kx+8,y+4,fmt(f.Iz,3),{fs:10.5});});
+  txt(g,x0,yb-16,"I_z",{fs:12,fill:V("--tinta"),fw:600});txt(g,x0+6,Y(A.Df+s.z2)+4,`z₂ = ${fmt(s.z2)} m`,{fs:11});
+  txt(g,x0+0.5*kx,yb-16,"0,5",{anchor:"middle",fs:10.5});
+}
+
+/* consolidación: perfil de estratos con σ′0 y Δσ en cada arcilla */
+function dibujarCon(r){
+  const svg=$("aSvg"),g=base(svg);flechas(svg);const tot=A.estr.reduce((a,c)=>a+c.h,0),esc=(Hh-110)/Math.max(tot,A.Df+1),ys=60,Y=z=>ys+z*esc;
+  let z=0;A.estr.forEach((e,i)=>{const y0=Y(z),y1=Y(z+e.h);g.appendChild(el("rect",{x:40,y:y0,width:W-80,height:y1-y0,fill:e.arcilla?"#C9A27E":V("--panel2"),"fill-opacity":e.arcilla?.35:1,stroke:V("--linea2")}));
+    txt(g,50,y0+16,`${i+1}. ${e.arcilla?"arcilla":"suelo"} · ${fmt(e.h)} m · γ ${fmt(e.gm,1)}/${fmt(e.gsat,1)}`+(e.arcilla?` · e₀ ${fmt(e.e0)} · Cc ${fmt(e.Cc,3)} · Cs ${fmt(e.Cs,3)}`:""),{fs:11});z+=e.h;});
+  if(A.nf<tot){const y=Y(A.nf);g.appendChild(el("line",{x1:40,y1:y,x2:W-40,y2:y,stroke:V("--agua2"),"stroke-width":1.5,"stroke-dasharray":"8 4"}));txt(g,W-46,y-5,"▽ N.F.",{anchor:"end",fs:11,fill:V("--agua2")});}
+  const bw=Math.min(A.B*esc,260),yb=Y(A.Df);g.appendChild(el("rect",{x:W/2-bw/2,y:yb-10,width:bw,height:10,fill:V("--hormigon"),stroke:V("--tinta3")}));
+  if(A.Df>0)g.appendChild(el("rect",{x:W/2-8,y:ys-20,width:16,height:yb-ys+10,fill:V("--hormigon"),stroke:V("--tinta3")}));
+  r.c.filas.forEach(f=>{const y=Y(f.zm);g.appendChild(el("circle",{cx:W/2,cy:y,r:5,fill:V("--falla")}));
+    txt(g,W/2+12,y+4,`σ′₀ = ${fmt(f.s0,1)} · Δσ = ${fmt(f.ds,1)} kPa → δ = ${fmt(mm(f.d),1)} mm`,{fs:11.5,fill:V("--tinta")});});
+}
+
+/* ---------------- tablas ---------------- */
+function tablaF(t,nombre){
+  const [a,b,c,d]=t.celdas,ce=v=>`<td class="act">${fmt(v,3)}</td>`;
+  return `<table><tr><th>${nombre}</th><th>m′ = ${fmt(t.col[0],1)}</th><th>m′ = ${fmt(t.col[1],1)}</th><th>interpolado en m′</th></tr>
+    <tr><th>n′ = ${fmt(t.fila[0],2)}</th>${ce(a)}${ce(b)}<td>${fmt(t.Fa,4)}</td></tr>
+    <tr><th>n′ = ${fmt(t.fila[1],2)}</th>${ce(c)}${ce(d)}<td>${fmt(t.Fb,4)}</td></tr>
+    <tr><th colspan="3">interpolado en n′ = ${fmt(t.nTabla,3)}</th><td class="act">${fmt(t.F,4)}</td></tr></table>`;
+}
+function tablas(r){
+  let h="",hf="";
+  if(r.met==="sb"){
+    const fila=(nom,s,act)=>s.rects.map((e,i)=>`<tr class="${act?"act":""}${i===0?" pt":""}">${i===0?`<td class="n" rowspan="${s.rects.length}">${nom}</td>`:""}<td class="${e.alfa>0?"mas":"menos"}">${e.alfa>0?"+":""}${e.alfa}</td><td>${fmt(e.Bp)}</td><td>${fmt(e.Lp)}</td><td>${fmt(e.m,3)}</td><td>${e.n===Infinity?"∞ → 100":fmt(e.n,3)}</td><td>${fmt(e.F1,3)}</td><td>${fmt(e.F2,3)}</td><td>${fmt(e.Is,3)}</td><td>${fmt(mm(e.dIf),2)}</td>${i===0?`<td rowspan="${s.rects.length}"><b>${fmt(mm(s.d),1)}</b></td>`:""}</tr>`).join("");
+    h=`<table><tr><th>punto</th><th>α′</th><th>B′</th><th>L′</th><th>m′</th><th>n′</th><th>F₁</th><th>F₂</th><th>I<sub>s</sub></th><th>α′·δ·I<sub>f</sub></th><th>δ (mm)</th></tr>
+      ${r.filas.map(f=>fila(PUNTOS[f.k],f.sb,f.k===A.punto)).join("")}${A.punto==="xy"?fila("(x, y)",r.sb,true):""}</table>
+      <p class="note" id="aNotaT">I<sub>f</sub> = ${fmt(r.sb.If,3)} en todos los puntos (${A.ifMan?"leído por ti":"Fig. 16"}). α′ = rectángulos iguales que llegan al punto (negativo: el que se resta).</p>`;
+    const e0=r.sb.rects[0];
+    if(A.modoF==="tabla"&&e0)hf=`<p class="sub" style="margin:6px 0 4px">Lectura en las Tablas 14 y 15 — ${PUNTOS[A.punto]}, primer rectángulo (m′ = ${fmt(e0.m,3)}; n′ = ${e0.n===Infinity?"∞":fmt(e0.n,3)})</p>${tablaF(e0.t1,"F₁ (T. 14)")}${tablaF(e0.t2,"F₂ (T. 15)")}`;
+    const fx=r.sb.fox;
+    if(fx.lecturas&&!A.ifMan)hf+=`<p class="sub" style="margin:8px 0 4px">Fig. 16 — I<sub>f</sub> con D<sub>f</sub>/B = ${fmt(fx.DfB,3)}</p><table><tr><th>ν \\ L/B</th><th>1</th><th>2</th><th>5</th><th>L/B = ${fmt(fx.LB,3)}</th></tr>
+      ${["0.3","0.4","0.5"].map(n=>`<tr><th>${n.replace(".",",")}</th>${fx.lecturas[n].map(v=>`<td>${fmt(v,3)}</td>`).join("")}<td>${fmt(ASEN.ifFox(fx.DfB,fx.LB,+n).If,3)}</td></tr>`).join("")}
+      <tr><th colspan="4">μ = ${fmt(fx.nu,3)} (interpolado entre paneles)</th><td class="act">${fmt(fx.If,3)}</td></tr></table>
+      <p class="note">Fig. 16 regenerada con la solución de Mindlin promediada sobre la zapata (Fox, 1948); coincide con la figura impresa ±0,02.</p>`;
+  }else if(r.met==="arc"){
+    const a=r.a,cols=["circ",1,2,5,10,"inf"],nom={circ:"círculo",inf:"∞"};
+    h=`<table><tr><th>H/B</th>${cols.map(c=>`<th>${nom[c]||"L/B = "+c}</th>`).join("")}</tr>${ASEN.C1_HB.map((hb,i)=>`<tr><th>${hb}</th>${cols.map(c=>`<td>${fmt(ASEN.C1[c][i],2)}</td>`).join("")}</tr>`).join("")}</table>
+      <p class="note">c₁ (Tabla de la pág. 41): H/B = ${fmt(a.HB,3)}${a.LB!=null?`, L/B = ${fmt(a.LB,3)}`:", círculo"} → <b>c₁ = ${fmt(a.c1,3)}</b> · c₂ (D<sub>f</sub>/B = ${fmt(a.DfB,3)}) = <b>${fmt(a.c2,3)}</b></p>`;
+  }else if(r.met==="sch"){
+    const s=r.s;h=`<table><tr><th>capa</th><th>z (m)</th><th>Δz</th><th>z medio</th><th>I<sub>z</sub></th><th>E<sub>s</sub> (kPa)</th><th>I<sub>z</sub>·Δz/E<sub>s</sub> (m³/kN)</th></tr>
+      ${s.filas.map(f=>`<tr><td class="n">${f.capa}</td><td>${fmt(f.z0)}–${fmt(f.z1)}</td><td>${fmt(f.dz,3)}</td><td>${fmt(f.zm,3)}</td><td>${fmt(f.Iz,3)}</td><td>${fmt(f.Es,0)}</td><td>${f.IzEs.toExponential(4).replace(".",",")}</td></tr>`).join("")}
+      <tr class="sum"><td colspan="6">Σ</td><td>${s.suma.toExponential(4).replace(".",",")}</td></tr></table>
+      <p class="note">Las capas se parten en los quiebres del diagrama (0,5B, B, 2B, 4B): con I<sub>z</sub> en la mitad de cada subcapa la suma es exacta.</p>`;
+  }else if(r.met==="con"){
+    h=`<table><tr><th>estrato</th><th>z (m)</th><th>H</th><th>σ′₀</th><th>σ′c</th><th>Δσ</th><th>σ′f</th><th>caso</th><th>Δe</th><th>δ (mm)</th></tr>
+      ${r.c.filas.map(f=>`<tr><td class="n">${f.estrato}</td><td>${fmt(f.z0)}–${fmt(f.z1)}</td><td>${fmt(f.H)}</td><td>${fmt(f.s0,1)}</td><td>${f.sc==null?"—":fmt(f.sc,1)}</td><td>${fmt(f.ds,1)}</td><td>${fmt(f.sf,1)}</td><td>${f.caso}</td><td>${fmt(f.de,4)}</td><td><b>${fmt(mm(f.d),1)}</b></td></tr>`).join("")}
+      <tr class="sum"><td colspan="9">primaria</td><td>${fmt(mm(r.dp),1)}</td></tr>${r.sec.length?`<tr class="sum"><td colspan="9">secundaria</td><td>${fmt(mm(r.ds),1)}</td></tr>`:""}</table>`;
+    hf=`<table><tr><th>U %</th>${ASEN.TV_U.map(u=>`<th>${u}</th>`).join("")}</tr><tr><th>T<sub>v</sub></th>${ASEN.TV.map((t,i)=>`<td class="${r.tiempo&&ASEN.TV_U[i]<=A.U&&A.U<=(ASEN.TV_U[i+1]??101)||r.tiempo&&ASEN.TV_U[i-1]<A.U&&A.U<=ASEN.TV_U[i]?"act":""}">${fmt(t,3)}</td>`).join("")}</tr></table><p class="note">Tabla 3 (pág. 44), interpolación lineal.</p>`;
+  }
+  $("aTabla").innerHTML=h;$("aTablaF").innerHTML=hf;
+}
+
+/* ---------------- pasos ---------------- */
+const P=(t,ec)=>({t,h:ec?`<span class="ec">${ec}</span>`:""});
+function pasos(r){
+  const L=Lr(),out=[],mu=A.mu;
+  if(r.met==="sb"){
+    const s=r.sb,e=s.rects[0];
+    out.push(P("Datos",`B = ${fmt(A.B)} m · L = ${fmt(L)} m · q = ${fmt(A.q,1)} kPa · E<sub>s</sub> = ${fmt(A.Es,0)} kPa · μ = ${fmt(mu,3)}<br>1 − μ² = ${fmt(1-mu*mu,4)} · (1 − 2μ)/(1 − μ) = ${fmt((1-2*mu)/(1-mu),4)}`));
+    out.push(P("Fórmula (esquina de un rectángulo)","δ = (q·α′·B′/E<sub>s</sub>)·(1 − μ²)·I<sub>s</sub>·I<sub>f</sub><br>I<sub>s</sub> = F₁ + [(1 − 2μ)/(1 − μ)]·F₂"));
+    out.push(P(`Partir la zapata en rectángulos con esquina en el ${PUNTOS[A.punto]}`,s.rects.map(x=>`α′ = ${x.alfa} · B′ × L′ = ${fmt(x.Bp)} × ${fmt(x.Lp)} m`).join("<br>")));
+    if(e)out.push(P("Forma y espesor",`m′ = L′/B′ = ${fmt(e.Lp)}/${fmt(e.Bp)} = ${fmt(e.m,3)}<br>n′ = H/B′ = ${e.n===Infinity?"∞ (sin roca) → fila n′ = 100":`${fmt(A.H)}/${fmt(e.Bp)} = ${fmt(e.n,3)}`}`));
+    if(e)out.push(P(A.modoF==="tabla"?"F₁ (Tabla 14) y F₂ (Tabla 15), interpolando":"F₁ y F₂ con la fórmula",`F₁ = ${fmt(e.F1,4)} · F₂ = ${fmt(e.F2,4)}<br>I<sub>s</sub> = ${fmt(e.F1,4)} + ${fmt((1-2*mu)/(1-mu),4)}·${fmt(e.F2,4)} = ${fmt(e.Is,4)}`));
+    out.push(P("Factor de profundidad I_f (Fig. 16)",A.Df>0?(A.ifMan?`I<sub>f</sub> = ${fmt(s.If,3)} (lectura tuya)`:`D<sub>f</sub>/B = ${fmt(A.Df/A.B,3)} · L/B = ${fmt(L/A.B,3)} · μ = ${fmt(mu,2)} → I<sub>f</sub> = ${fmt(s.If,3)}`):"D<sub>f</sub> = 0 → I<sub>f</sub> = 1"));
+    out.push(P("Asentamiento",s.rects.map(x=>`${x.alfa>0?"+":""}${x.alfa}·(${fmt(A.q,0)}·${fmt(x.Bp)}/${fmt(A.Es,0)})·${fmt(1-mu*mu,4)}·${fmt(x.Is,4)}·${fmt(s.If,3)} = ${fmt(mm(x.dIf),2)} mm`).join("<br>")+`<br><b>δ = ${fmt(mm(s.d),1)} mm</b>`));
+    if(r.harr)out.push(P("Comprobación con Harr (D_f = 0, H = ∞)",`α(L/B = ${fmt(L/A.B,3)}) = ${fmt(r.harr.alfa,3)} → δ centro = ${fmt(mm(r.harr.centro),1)} mm · esquina = ${fmt(mm(r.harr.esquina),1)} mm<br>(F₁ con n′ = ∞ vale α/2; la tabla llega a n′ = 100)`));
+  }else if(r.met==="harr"){
+    const h=r.h;out.push(P("Datos",`B = ${fmt(A.B)} m · L = ${fmt(L)} m · q = ${fmt(A.q,1)} kPa · E<sub>s</sub> = ${fmt(A.Es,0)} kPa · μ = ${fmt(mu,3)}`));
+    out.push(P("α (Fig. 14)",`m₁ = L/B = ${fmt(h.m1,3)}<br>α = (1/π)·[ln((√(1+m₁²)+m₁)/(√(1+m₁²)−m₁)) + m₁·ln((√(1+m₁²)+1)/(√(1+m₁²)−1))] = ${fmt(h.alfa,3)}`));
+    out.push(P("Centro",`δ = (B·q/E<sub>s</sub>)·(1 − μ²)·α = (${fmt(A.B)}·${fmt(A.q,0)}/${fmt(A.Es,0)})·${fmt(1-mu*mu,4)}·${fmt(h.alfa,3)} = <b>${fmt(mm(h.centro),1)} mm</b>`));
+    out.push(P("Esquina",`δ = δ<sub>centro</sub>/2 = <b>${fmt(mm(h.esquina),1)} mm</b>`));
+  }else if(r.met==="arc"){
+    const a=r.a;out.push(P("Fórmula",`δ = c₁·c₂·q·B/E<sub>s</sub>`));
+    out.push(P("c₁ (H/B, L/B)",`H/B = ${fmt(a.HB,3)} · ${a.LB!=null?`L/B = ${fmt(a.LB,3)}`:"círculo"} → c₁ = ${fmt(a.c1,3)}`));
+    out.push(P("c₂ (D_f/B)",`D<sub>f</sub>/B = ${fmt(a.DfB,3)} → c₂ = ${fmt(a.c2,3)}`));
+    out.push(P("Asentamiento",`δ = ${fmt(a.c1,3)}·${fmt(a.c2,3)}·${fmt(A.q,1)}·${fmt(A.B)}/${fmt(A.Es,0)} = <b>${fmt(mm(a.d),1)} mm</b>`));
+  }else if(r.met==="sch"){
+    const s=r.s;out.push(P("Sobrecarga y presión neta",`q = γ·D<sub>f</sub> = ${fmt(A.gam,1)}·${fmt(A.Df)} = ${fmt(s.q,2)} kPa · q̄ − q = ${fmt(A.q,1)} − ${fmt(s.q,2)} = ${fmt(s.neta,2)} kPa`));
+    out.push(P("Factores",`C₁ = 1 − 0,5·q/(q̄ − q) = ${fmt(s.C1,4)}<br>C₂ = 1 + 0,2·log(t/0,1) = 1 + 0,2·log(${fmt(A.t,2)}/0,1) = ${fmt(s.C2,4)}`));
+    out.push(P("Diagrama I_z",`L/B = ${fmt(L/A.B,3)}: pico 0,5 a ${fmt(L/A.B>=10?A.B:(L/A.B<=1?A.B/2:A.B/2+(A.B/2)*(L/A.B-1)/9),2)} m · z₂ = ${fmt(s.z2,2)} m${L/A.B>1&&L/A.B<10?" (interpolado entre L/B = 1 y 10)":""}`));
+    out.push(P("Σ I_z·Δz/E_s (tabla)",`Σ = ${s.suma.toExponential(4).replace(".",",")} m³/kN`));
+    out.push(P("Asentamiento",`δ = C₁·C₂·(q̄ − q)·Σ = ${fmt(s.C1,4)}·${fmt(s.C2,4)}·${fmt(s.neta,2)}·${s.suma.toExponential(4).replace(".",",")} = <b>${fmt(mm(s.d),1)} mm</b>`));
+  }else{
+    r.c.filas.forEach(f=>{
+      out.push(P(`Estrato ${f.estrato}: σ′₀ en la mitad (z = ${fmt(f.zm)} m)`,`σ′₀ = ${fmt(f.s0,2)} kPa${f.sc!=null?` · σ′c = ${fmt(f.sc,2)} kPa (OCR = ${fmt(f.sc/f.s0,2)})`:" · normalmente consolidada"}`));
+      out.push(P(`Δσ bajo el centro (${A.dsMet==="2a1"?"2:1":"Boussinesq"})`,A.dsProm==="simpson"?`Δσ = (Δσ<sub>t</sub> + 4Δσ<sub>m</sub> + Δσ<sub>b</sub>)/6 = (${fmt(f.dst,1)} + 4·${fmt(f.dsm,1)} + ${fmt(f.dsb,1)})/6 = ${fmt(f.ds,2)} kPa`:`Δσ(z − D<sub>f</sub> = ${fmt(f.zm-A.Df)} m) = ${fmt(f.ds,2)} kPa`));
+      const e=A.estr[f.estrato-1],H=fmt(f.H),e0=fmt(e.e0,3);
+      const ec=f.caso==="NC"?`δ = H·C<sub>c</sub>·log(σ′f/σ′₀)/(1 + e₀) = ${H}·${fmt(e.Cc,3)}·log(${fmt(f.sf,1)}/${fmt(f.s0,1)})/(1 + ${e0})`:
+        (f.sf<=f.sc?`δ = H·C<sub>s</sub>·log(σ′f/σ′₀)/(1 + e₀) = ${H}·${fmt(e.Cs,3)}·log(${fmt(f.sf,1)}/${fmt(f.s0,1)})/(1 + ${e0})`:
+        `δ = H/(1 + e₀)·[C<sub>s</sub>·log(σ′c/σ′₀) + C<sub>c</sub>·log(σ′f/σ′c)] = ${H}/(1 + ${e0})·[${fmt(e.Cs,3)}·log(${fmt(f.sc,1)}/${fmt(f.s0,1)}) + ${fmt(e.Cc,3)}·log(${fmt(f.sf,1)}/${fmt(f.sc,1)})]`);
+      out.push(P(`Estrato ${f.estrato}: ${f.caso}`,`${ec} = <b>${fmt(mm(f.d),1)} mm</b>`));});
+    if(r.tiempo){const t=r.tiempo;out.push(P(`Tiempo para U = ${fmt(A.U,0)} % (Tabla 3)`,`T<sub>v</sub> = ${fmt(t.Tv,3)} (teoría ${fmt(t.TvTeoria,3)}) · H<sub>D</sub> = ${fmt(t.Hd,2)} m<br>t = T<sub>v</sub>·H<sub>D</sub>²/C<sub>v</sub> = ${fmt(t.Tv,3)}·${fmt(t.Hd*100,0)}²/${fmt(A.cv,4)} = ${fmt(t.t/86400,1)} días = <b>${fmt(t.anos,2)} años</b>`));}
+    if(r.sec.length)out.push(P("Consolidación secundaria",`δ<sub>s</sub> = H·c<sub>α</sub>·log((t₁₀₀ + Δt)/t₁₀₀) = Σ ${r.sec.map(s=>fmt(mm(s.d),1)).join(" + ")} = ${fmt(mm(r.ds),1)} mm`));
+    out.push(P("Total",`δ = ${fmt(mm(r.dp),1)}${r.sec.length?` + ${fmt(mm(r.ds),1)}`:""} = <b>${fmt(mm(r.d),1)} mm</b>`));
+  }
+  return out;
+}
+
+/* ---------------- verificaciones ---------------- */
+function chequeos(r){
+  const c=[],d=mm(r.d);
+  r.avisos.forEach(a=>c.push(["medio",a]));
+  if(r.met!=="con")c.push([d<=25?"ok":(d<=50?"medio":"falla"),`δ = ${fmt(d,1)} mm ${d<=25?"≤ 25 mm (criterio usual en arenas)":(d<=50?"entre 25 y 50 mm: revisar el criterio del proyecto":"> 50 mm: excesivo para una zapata aislada")}`]);
+  if(r.met==="sb"&&r.harr)c.push(["ok",`Harr (mismo caso): centro ${fmt(mm(r.harr.centro),1)} mm · esquina ${fmt(mm(r.harr.esquina),1)} mm`]);
+  if(r.met==="sb"&&A.forma==="rect"&&A.L<A.B)c.push(["medio","L < B: el «borde largo» queda sobre el lado de B. Pon B como el lado menor."]);
+  return c.map(([k,t])=>`<div class="chk"><span class="dot" style="background:var(--${k==="ok"?"ok":(k==="falla"?"falla":"medio")})"></span><span>${t}</span></div>`).join("")||`<div class="chk">sin observaciones</div>`;
+}
+
+/* ---------------- controles ---------------- */
+const CAMPOS={x:2,y:2,B:2,L:2,Df:2,q:1,Es:0,mu:3,H:2,If:3,gam:2,t:2,nf:2,cv:4,U:0,ca:4,t100:2,dt:2};
+function filasCapas(){
+  $("aCapas").innerHTML=A.capas.map((c,i)=>`<div class="filaCapa" data-i="${i}"><label>espesor (m)<input type="text" inputmode="decimal" data-k="h" value="${fmt(c.h,2)}"></label><label>E<sub>s</sub> (kPa)<input type="text" inputmode="decimal" data-k="Es" value="${fmt(c.Es,0)}"></label><button data-a="del" title="quitar capa">✕</button></div>`).join("")+`<button class="btnmini" data-a="add">+ capa</button>`;
+  const ks=[["h","espesor (m)",2],["gm","γ",2],["gsat","γsat",2],["e0","e₀",3],["Cc","Cc",3],["Cs","Cs",3],["OCR","OCR",2]];
+  $("aEstr").innerHTML=A.estr.map((e,i)=>`<div class="filaCapa" data-j="${i}">${ks.filter(k=>e.arcilla||["h","gm","gsat"].includes(k[0])).map(([k,n,d])=>`<label>${n}<input type="text" inputmode="decimal" data-k="${k}" value="${e[k]==null?"":fmt(e[k],d)}"></label>`).join("")}<label class="ck"><input type="checkbox" data-k="arcilla" ${e.arcilla?"checked":""}>arcilla</label><button data-a="del" title="quitar estrato">✕</button></div>`).join("")+`<button class="btnmini" data-a="add">+ estrato</button>`;
+}
+function sync(){
+  for(const k in CAMPOS){const n=$("an_"+k),rg=$("ar_"+k);if(n&&document.activeElement!==n)n.value=fmt(A[k],CAMPOS[k]);if(rg)rg.value=A[k];}
+  const seg=(id,v)=>document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(v))));
+  seg("aMetodo",A.met);seg("aPunto",A.punto);seg("aModoF",A.modoF);seg("aForma",A.forma);seg("aDsMet",A.dsMet);seg("aDsProm",A.dsProm);seg("aDren",A.dren);seg("aCorte",A.corte);
+  $("aRoca").checked=A.roca;$("aIfMan").checked=A.ifMan;
+  const el_=A.met==="sb"||A.met==="harr"||A.met==="arc";
+  $("aSbBlk").hidden=!(A.met==="sb"||A.met==="harr");$("aXY").hidden=A.punto!=="xy"||A.met!=="sb";
+  document.querySelectorAll("#aPunto button").forEach(b=>b.hidden=A.met==="harr"&&!["c","e"].includes(b.dataset.v));
+  document.querySelector("#aModoF").hidden=A.met!=="sb";
+  document.querySelector('#aForma button[data-v="circ"]').hidden=!(A.met==="arc"||A.met==="con");
+  $("aElBlk").hidden=!el_;$("aSchBlk").hidden=A.met!=="sch";$("aConBlk").hidden=A.met!=="con";
+  $("af_mu").hidden=A.met==="arc";$("af_H").hidden=!A.roca||A.met==="harr";$("aRoca").parentElement.hidden=A.met==="harr";
+  $("aIfBlk").hidden=A.met!=="sb";$("af_If").hidden=!A.ifMan;$("af_L").hidden=A.forma!=="rect";
+  $("aCorte").hidden=!(A.met==="sb"||A.met==="harr"||A.met==="arc");
+  document.querySelector('#aCorte button[data-v="plan"]').hidden=A.met!=="sb";
+  $("aMetNota").textContent={sb:"Elástico en cualquier suelo, con desplante (I_f) y roca (n′). Es el método de la tarea.",harr:"Elástico con D_f = 0, H = ∞, zapata flexible: centro y esquina.",
+    arc:"Elástico en arcilla saturada (μ = 0,5) sobre capa rígida: δ = c₁c₂qB/E_s.",sch:"Elástico en arena con el diagrama I_z (capas con distinto E_s).",con:"Consolidación primaria de las capas de arcilla (y, si das c_α, la secundaria)."}[A.met];
+  $("aNotaSuelo").textContent=A.met==="arc"?"Sin roca se usa H/B = 30 (la tabla no da más).":"";
+}
+function cambio(){guardar();render();}
+function render(){
+  if($("mainAsen").hidden)return;
+  if(A.forma==="circ"&&!(A.met==="arc"||A.met==="con"))A.forma="cuad";
+  if(A.corte==="plan"&&A.met!=="sb")A.corte="B";
+  sync();
+  let r;try{r=calcular();}catch(e){$("aRes").textContent="—";$("aChk").innerHTML=`<div class="chk">error: ${e.message}</div>`;return;}
+  ultimo=r;
+  $("aRes").textContent=fmt(mm(r.d),1);
+  $("aResTit").textContent="· "+NOMBRES[r.met];
+  $("aResChip").innerHTML=r.met==="sb"||r.met==="harr"?`${PUNTOS[r.met==="harr"&&!r.esquina?"c":A.punto]}${r.met==="sb"?` · I<sub>f</sub> = ${fmt(r.sb.If,3)}`:""}`:(r.met==="con"?`primaria ${fmt(mm(r.dp),1)} mm${r.sec.length?` · secundaria ${fmt(mm(r.ds),1)} mm`:""}${r.tiempo?` · t(${fmt(A.U,0)} %) = ${fmt(r.tiempo.anos,2)} años`:""}`:"centro");
+  ({sb:A.corte==="plan"?dibujarPlanta:dibujarCorte,harr:dibujarCorte,arc:dibujarCorte,sch:dibujarSch,con:dibujarCon})[r.met](r);
+  tablas(r);
+  $("aPasos").innerHTML=pasos(r).map(p=>`<li><span class="t">${p.t}</span>${p.h}</li>`).join("");
+  $("aChk").innerHTML=chequeos(r);
+  $("ats_metodo").textContent=NOMBRES[r.met].split(" ")[0];$("ats_zapata").textContent=`${fmt(A.B,1)}×${fmt(Lr(),1)}`;
+  $("ats_suelo").textContent=r.met==="con"?`${A.estr.length} estratos`:(r.met==="sch"?`${A.capas.length} capas`:`Es ${fmt(A.Es/1000,0)} MPa`);
+  const br=$("barraRes");if(br){br.hidden=false;br.innerHTML=`δ <b>${fmt(mm(r.d),1)}</b> mm <small>· ${NOMBRES[r.met]}</small>`;}
+  if(window.MZB){const D={met:r.met,S:r.S||{B:A.B,L:Lr(),q:A.q,Es:A.Es,mu:A.mu},p:r.p,esquina:r.esquina};
+    MZB.verificar("chipPyAsen","asentamiento",D,r.met==="con"?r.dp:r.d,"d",6);}
+}
+let ultimo=null;
+
+for(const k in CAMPOS){const rg=$("ar_"+k),n=$("an_"+k);
+  if(rg)rg.addEventListener("input",e=>{A[k]=+e.target.value;cambio();});
+  if(n)n.addEventListener("change",e=>{const v=num(e.target.value);if(v!=null){A[k]=v;cambio();}});}
+[["aMetodo","met"],["aPunto","punto"],["aModoF","modoF"],["aForma","forma"],["aDsMet","dsMet"],["aDsProm","dsProm"],["aDren","dren"],["aCorte","corte"]].forEach(([id,k])=>
+  $(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;A[k]=b.dataset.v;
+    if(k==="punto"&&b.dataset.v==="xy"){const p=pDe("xy");A.x=p.x;A.y=p.y;}cambio();}));
+$("aRoca").addEventListener("change",e=>{A.roca=e.target.checked;cambio();});
+$("aIfMan").addEventListener("change",e=>{A.ifMan=e.target.checked;cambio();});
+const lista=(id,arr,nuevo)=>{const box=$(id);
+  box.addEventListener("change",e=>{const f=e.target.closest(".filaCapa");if(!f)return;const o=A[arr][+(f.dataset.i??f.dataset.j)],k=e.target.dataset.k;
+    if(k==="arcilla"){o.arcilla=e.target.checked;if(o.arcilla)Object.assign(o,{e0:o.e0??0.9,Cc:o.Cc??0.3,Cs:o.Cs??0.05,OCR:o.OCR??1});filasCapas();}
+    else{const v=num(e.target.value);if(v==null&&k!=="OCR")return;o[k]=v;}cambio();});
+  box.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+    if(b.dataset.a==="add")A[arr].push(nuevo());else if(b.dataset.a==="del"&&A[arr].length>1)A[arr].splice(+(b.closest(".filaCapa").dataset.i??b.closest(".filaCapa").dataset.j),1);
+    filasCapas();cambio();});};
+lista("aCapas","capas",()=>({h:2,Es:15000}));lista("aEstr","estr",()=>({h:2,gm:17,gsat:19,arcilla:false}));
+filasCapas();
+/* al entrar al módulo (botón de la cabecera) */
+$("segModulo").addEventListener("click",()=>setTimeout(render,0));
+render();
+
+/* para el informe PDF */
+window.ASENI={informe:()=>({A:Object.assign({},A,{L:Lr()}),r:ultimo,nombre:ultimo&&NOMBRES[ultimo.met],pasos:ultimo?pasos(ultimo):[]})};
+})();
+
+/* =====================================================================
    INFORME PDF — arma la solución completa del ejercicio que está en pantalla
    (capacidad de carga o incremento de esfuerzos) y abre el diálogo de impresión.
    En el celular: «Imprimir» → «Guardar como PDF» (Android) o compartir/guardar en Archivos (iPhone).
@@ -3876,14 +4454,22 @@ function esfuerzos(){
     sec("Desarrollo paso a paso",pasos)+sec("Verificaciones",$("eChk").innerHTML);
 }
 
+function asentamientos(){
+  const d=window.ASENI.informe(),A=d.A,r=d.r;if(!r)return "";
+  const datos=`<table>${fila("Método",esc(d.nombre))}${fila("Zapata",`${A.forma} · B = ${fmt(A.B)} m${A.forma==="rect"?` · L = ${fmt(A.L)} m`:""} · D<sub>f</sub> = ${fmt(A.Df)} m · q<sub>cont</sub> = ${fmt(A.q,1)} kPa`)}
+    ${r.met==="sb"||r.met==="harr"||r.met==="arc"?fila("Suelo",`E<sub>s</sub> = ${fmt(A.Es,0)} kPa${r.met!=="arc"?` · μ = ${fmt(A.mu,3)}`:""} · ${A.roca&&r.met!=="harr"?`roca a H = ${fmt(A.H)} m bajo la base`:"sin roca (H = ∞)"}`):""}</table>`;
+  const pasos=`<ol class="pasos">${d.pasos.map(p=>`<li><b>${p.t}</b><br>${p.h}</li>`).join("")}</ol>`;
+  return `<h1>Asentamientos</h1>`+sec("Datos",datos)+sec("Resultado",`<p class="grande">δ = ${fmt(r.d*1000,1)} mm</p><p>${$("aResChip").innerHTML}</p>`)+
+    sec("Figura",figura("aSvg"))+sec("Tabla",$("aTabla").innerHTML+$("aTablaF").innerHTML)+sec("Desarrollo paso a paso",pasos)+sec("Verificaciones",$("aChk").innerHTML);
+}
+
 function exportar(){
-  if(!$("mainAsen").hidden)return;
-  const esf=!$("mainEsf").hidden,cuerpo=esf?esfuerzos():capacidad();
+  const asen=!$("mainAsen").hidden,esf=!$("mainEsf").hidden,cuerpo=asen?asentamientos():(esf?esfuerzos():capacidad());
   let box=$("informe");if(!box){box=document.createElement("div");box.id="informe";document.body.appendChild(box);}
   const f=new Date().toLocaleString("es-CO",{dateStyle:"long",timeStyle:"short"});
   box.innerHTML=`<header><b>Mesa de cálculo — cimentaciones superficiales</b><span>Fundaciones · Universidad del Cauca · ${f}</span></header>${cuerpo}
     <footer>Solución generada con la app «Cimentaciones» (juniorferdev.github.io/mesa-zapatas-web). Convenciones del curso del Prof. Lucio Cruz. Verifica siempre con tu desarrollo a mano.</footer>`;
-  const t=document.title;document.title=(esf?"Esfuerzos":"Capacidad de carga")+" — informe";
+  const t=document.title;document.title=(asen?"Asentamientos":(esf?"Esfuerzos":"Capacidad de carga"))+" — informe";
   setTimeout(()=>{window.print();document.title=t;},60);
 }
 $("btnPDF").addEventListener("click",exportar);
