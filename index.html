@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202611172344";
+window.APP_VER="202611200324";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -761,14 +761,14 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <button data-t="carga" role="tab">Carga<small id="dts_carga"></small></button><button data-t="suelo" role="tab">Suelo<small id="dts_suelo"></small></button><button data-t="servicio" role="tab">Servicio<small id="dts_serv"></small></button>
   </nav>
   <section class="card" data-pan="carga"><h2>Carga y zapata</h2><div class="body">
-    <div class="acc" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><button class="chip" id="dEjClase">Ejercicio de clase (D<sub>f</sub> = 0)</button><button class="chip" id="dEjTarea">Tarea (D<sub>f</sub> = 2 m)</button></div>
+    <div class="acc" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><button class="chip" id="dEjClase">Ejercicio de clase (D<sub>f</sub> = 0)</button><button class="chip" id="dEjTarea">Tarea D<sub>f</sub> = 1,5 m</button><button class="chip" data-df="1.8">D<sub>f</sub> = 1,8 m</button><button class="chip" data-df="1.3">D<sub>f</sub> = 1,3 m</button></div>
     <div class="seg full" id="dModo" role="group" aria-label="Modo" style="margin-bottom:10px"><button data-v="prop">Yo propongo B y D<sub>f</sub> (verificar)</button><button data-v="auto">La app busca B</button></div>
 <div class="fld" id="df_P"><div class="lab"><span>Carga de la columna P<sub>z</sub> (D + L)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_P"> kN</b></div><input type="range" id="dr_P" min="50" max="5000" step="10"></div>
     <div class="seg full" id="dForma" role="group" aria-label="Forma" style="margin:6px 0 10px"><button data-v="cuad">cuadrada (B = L)</button><button data-v="rect">rectangular</button></div>
 <div class="fld" id="df_LB"><div class="lab"><span>Relación L/B</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_LB"> </b></div><input type="range" id="dr_LB" min="1" max="5" step="0.05"></div>
 <div class="fld" id="df_Df"><div class="lab"><span>Desplante D<sub>f</sub> (propuesto)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_Df"> m</b></div><input type="range" id="dr_Df" min="0" max="6" step="0.05"></div>
 <div class="fld" id="df_Bp"><div class="lab"><span>Ancho B propuesto</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_Bp"> m</b></div><input type="range" id="dr_Bp" min="0.5" max="8" step="0.05"></div>
-    <div class="acc" id="dTanteoBtns" style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px"><button class="chip" id="dGuardar">＋ guardar este tanteo</button><button class="chip" id="dBorrar">borrar tanteos</button></div>
+    <div class="acc" id="dTanteoBtns" style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px"><button class="chip" id="dGuardar">＋ guardar este tanteo</button><button class="chip" id="dLlenar">llenar tanteos (como el PDF)</button><button class="chip" id="dBorrar">borrar tanteos</button></div>
     <p class="sub" style="margin:8px 0 4px">Combinación de carga (NSR-10, factor de seguridad)</p>
 <div class="fld" id="df_FS"><div class="lab"><span>Factor de seguridad FS (q<sub>adm</sub> = q<sub>u</sub>/FS)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_FS"> </b></div><input type="range" id="dr_FS" min="1" max="5" step="0.1"></div>
     <div class="acc" id="dFSchips" style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 6px"><button class="chip" data-v="3">D + L → 3</button><button class="chip" data-v="2.5">D + L máx → 2,5</button><button class="chip" data-v="1.5">D + L + E → 1,5</button></div>
@@ -783,6 +783,10 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
 <div class="fld" id="df_gsat"><div class="lab"><span>γ<sub>sat</sub> (bajo el N.F.)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_gsat"> kN/m³</b></div><input type="range" id="dr_gsat" min="10" max="23" step="0.1"></div>
     <label class="chkLab"><input type="checkbox" id="dHayNF"> hay nivel freático</label>
 <div class="fld" id="df_nf"><div class="lab"><span>Nivel freático (desde la superficie)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_nf"> m</b></div><input type="range" id="dr_nf" min="0" max="20" step="0.1"></div>
+<p class="sub" style="margin:8px 0 4px">Asentamiento elástico δ<sub>e</sub></p>
+    <div class="seg full" id="dElas" role="group" aria-label="Elástico" style="margin-bottom:8px"><button data-v="Iw">q·B·(1 − μ²)·I<sub>w</sub>/E (enunciado)</button><button data-v="c1c2">c₁·c₂·q·B/E (pág. 41)</button></div>
+<div class="fld" id="df_mu"><div class="lab"><span>Relación de Poisson μ</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_mu"> </b></div><input type="range" id="dr_mu" min="0.2" max="0.5" step="0.01"></div>
+<div class="fld" id="df_Iw"><div class="lab"><span>Factor I<sub>w</sub> (cuadrada rígida = 0,82)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_Iw"> </b></div><input type="range" id="dr_Iw" min="0.5" max="1.5" step="0.01"></div>
 <div class="fld" id="df_Es"><div class="lab"><span>Módulo E (no drenado)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_Es"> kPa</b></div><input type="range" id="dr_Es" min="1000" max="100000" step="500"></div>
 <div class="fld" id="df_e0"><div class="lab"><span>Relación de vacíos e₀</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_e0"> </b></div><input type="range" id="dr_e0" min="0.3" max="3" step="0.01"></div>
 <div class="fld" id="df_Cc"><div class="lab"><span>Índice de compresión C<sub>c</sub></span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_Cc"> </b></div><input type="range" id="dr_Cc" min="0.05" max="1.5" step="0.01"></div>
@@ -2076,7 +2080,7 @@ const DIS=(function(){
   const AS=(typeof module!=="undefined"&&typeof require!=="undefined")?require("./asentamientos.js"):ASEN;
   const INF=Infinity,NC=5.14,NQ=1.0,ANIO=365*24*3600;
   function norm(S){
-    const D={P:800,LB:1,Df:0,Su:50,gm:15,gsat:null,nf:INF,H:null,Es:15000,e0:0.8,Cc:0.3,Cs:0.03,OCR:1,Cv:1e-7,dren:1,t:20,dadm:0.15,FS:3,
+    const D={P:800,LB:1,Df:0,Su:50,gm:15,gsat:null,nf:INF,H:null,Es:15000,elastico:"Iw",mu:0.5,Iw:0.82,e0:0.8,Cc:0.3,Cs:0.03,OCR:1,Cv:1e-7,dren:1,t:20,dadm:0.15,FS:3,
       fcs:"tablero",presion:"total",metodo:"boussinesq",zinf:"2B",nsub:10,dz:1.0,incluirDi:true,incluirSec:true,Ca:null,paso:0.05,Bmax:15,pasoDf:0.5,Dfmax:10};
     for(const k in (S||{}))if(S[k]!=null)D[k]=S[k];
     if(D.gsat==null)D.gsat=D.gm;if(D.nf==null)D.nf=INF;return D;
@@ -2115,6 +2119,7 @@ const DIS=(function(){
     let qs=S.presion==="neta"?c.qcont-sv:c.qcont;qs=Math.max(qs,0);
     const zf=profundidadInfluencia(B,L,qs,S),Hc=Math.max(zf-S.Df,1e-9),roca=S.H!=null;
     const ei=AS.arcilla({B,L,H:roca?Hc:null,Df:S.Df,q:qs,Es:S.Es});
+    if(S.elastico==="Iw")ei.d=qs*B*(1-S.mu*S.mu)*S.Iw/S.Es;   // δe = q·B·(1 − μ²)·I_w/E (datos del enunciado)
     const estr=(S.Df>0?[{h:S.Df,gm:S.gm,gsat:S.gsat,arcilla:false}]:[]).concat(
       subcapas(Hc,S).map(h=>({h,gm:S.gm,gsat:S.gsat,arcilla:true,e0:S.e0,Cc:S.Cc,Cs:S.Cs,OCR:S.OCR})));
     const con=AS.consolidacion({B,L,Df:S.Df,q:qs,nf:S.nf,estratos:estr,metodo:S.metodo});
@@ -4649,14 +4654,14 @@ const num=v=>{const x=parseFloat(String(v).replace(",","."));return isFinite(x)?
 const cvTxt=(m,n)=>`${fmt(m,1)}×10⁻${String(n).split("").map(c=>"⁰¹²³⁴⁵⁶⁷⁸⁹"[+c]).join("")}`;
 
 /* ---------------- estado (por defecto: el ejercicio de clase, D_f = 0) ---------------- */
-const CLASE={modo:"prop",Bp:2.8,tanteos:[],P:800,forma:"cuad",LB:1,Df:0,FS:3,Bchk:2.35,sec:true,caAuto:true,Ca:0.0096,fcs:"tablero",paso:0.05,Su:50,gm:15,gsat:15,hayNF:false,nf:2,Es:15000,e0:0.8,Cc:0.3,Cs:0.03,OCR:1,
+const CLASE={elas:"Iw",mu:0.5,Iw:0.82,modo:"prop",Bp:2.8,tanteos:[],P:800,forma:"cuad",LB:1,Df:0,FS:3,Bchk:2.35,sec:true,caAuto:true,Ca:0.0096,fcs:"tablero",paso:0.05,Su:50,gm:15,gsat:15,hayNF:false,nf:2,Es:15000,e0:0.8,Cc:0.3,Cs:0.03,OCR:1,
   adm:"0.15",t:20,cvm:1,cvn:7,dren:"1",roca:false,H:10,zinf:"2B",pres:"total",ds:"boussinesq",nsub:10,dz:1,di:true};
 let A=Object.assign({},CLASE);
-try{const g=localStorage.getItem("dis.v3");if(g)A=Object.assign({},CLASE,JSON.parse(g));}catch(e){}
-const guardar=()=>{try{localStorage.setItem("dis.v3",JSON.stringify(A));}catch(e){}};
+try{const g=localStorage.getItem("dis.v4");if(g)A=Object.assign({},CLASE,JSON.parse(g));}catch(e){}
+const guardar=()=>{try{localStorage.setItem("dis.v4",JSON.stringify(A));}catch(e){}};
 const datos=()=>({P:A.P,LB:A.forma==="rect"?A.LB:1,Df:A.Df,Su:A.Su,gm:A.gm,gsat:A.gsat,nf:A.hayNF?A.nf:null,H:A.roca?A.H:null,Es:A.Es,
   e0:A.e0,Cc:A.Cc,Cs:A.Cs,OCR:A.OCR,Cv:A.cvm*Math.pow(10,-A.cvn),dren:+A.dren,t:A.t,dadm:+A.adm,FS:+A.FS,fcs:A.fcs,presion:A.pres,
-  metodo:A.ds,zinf:A.zinf,nsub:A.nsub,dz:A.dz,incluirDi:A.di,incluirSec:A.sec,Ca:A.caAuto?null:A.Ca,paso:A.paso,Bmax:15,pasoDf:0.5,Dfmax:10});
+  metodo:A.ds,zinf:A.zinf,nsub:A.nsub,dz:A.dz,elastico:A.elas,mu:A.mu,Iw:A.Iw,incluirDi:A.di,incluirSec:A.sec,Ca:A.caAuto?null:A.Ca,paso:A.paso,Bmax:15,pasoDf:0.5,Dfmax:10});
 
 /* ---------------- cálculo ---------------- */
 let ultimo=null;
@@ -4730,7 +4735,7 @@ function dibujar(r){
 
 /* ---------------- tablas ---------------- */
 function tablaTanteos(r){
-  const f=r.ver,S=r.S,fila=(x,act)=>`<tr class="${act?"act":""}"><td class="n">${x.n}</td><td>${fmt(x.Df)}</td><td>${fmt(x.B)}</td><td>${fmt(x.Df/x.B,2)}</td><td>${fmt(x.qcont,1)}</td><td>${fmt(x.FSr,2)} ${x.FSr>=x.FS-1e-9?"✓":"✗"}</td><td>${fmt(cm(x.de),2)}</td><td>${fmt(x.U,1)}</td><td>${fmt(cm(x.dp),2)}</td><td>${fmt(cm(x.dsec),2)}</td><td><b>${fmt(cm(x.dt),2)}</b></td><td>${fmt(cm(x.dfin),2)}</td><td>${x.dt<=x.dadm+1e-12&&x.FSr>=x.FS-1e-9?(x.dfin<=x.dadm+1e-12?"✓ cumple":"✓ a "+fmt(x.t,0)+" años, luego sigue"):"✗ no cumple"}</td></tr>`;
+  const f=r.ver,S=r.S,fila=(x,act)=>`<tr class="${act?"act":""}"><td class="n">${x.n}</td><td>${fmt(x.Df)}</td><td>${fmt(x.B)}</td><td>${fmt(x.Df/x.B,2)}</td><td>${fmt(x.qcont,1)}</td><td>${fmt(x.FSr,2)} ${x.FSr>=x.FS-1e-9?"✓":"✗"}</td><td>${fmt(cm(x.de),2)}</td><td>${fmt(x.U,1)}</td><td>${fmt(cm(x.dp),2)}</td><td>${fmt(cm(x.dsec),2)}</td><td><b>${fmt(cm(x.dt),Math.abs(x.dt-x.dadm)<5e-4?3:2)}</b></td><td>${fmt(cm(x.dfin),2)}</td><td>${x.dt<=x.dadm+1e-12&&x.FSr>=x.FS-1e-9?(x.dfin<=x.dadm+1e-12?"✓ cumple":"✓ a "+fmt(x.t,0)+" años, luego sigue"):"✗ no cumple"}</td></tr>`;
   const actual={n:"actual",Df:S.Df,B:f.B,qcont:f.qcont,FSr:f.FSr,FS:S.FS,de:f.de,U:f.U,dp:f.dp,dsec:f.dsec,dt:f.dt,dfin:f.de+f.dc+f.dsec,dadm:S.dadm,t:S.t};
   return `<p class="sub" style="margin:4px 0">Tus tanteos (propón B y D<sub>f</sub>, mira si cumple y guarda el intento)</p>
   <table><tr><th>tanteo</th><th>D<sub>f</sub></th><th>B</th><th>D<sub>f</sub>/B</th><th>q<sub>cont</sub></th><th>FS real</th><th>δ<sub>e</sub></th><th>U %</th><th>δ<sub>p</sub></th><th>δ<sub>s</sub></th><th>δ<sub>t</sub> TOTAL</th><th>δ final (U 100 %)</th><th></th></tr>
@@ -4758,7 +4763,7 @@ function tablas(r){
    <li>Se repite en cada subcapa hasta ${fmt(f.Hc,2)} m bajo la base (${S.H!=null?"capa rígida":(S.zinf==="2B"?"H = 2B":"Δσ ≤ 10 % σ′₀")}); la última subcapa toma el espesor que sobra. Se suman: Σδ<sub>p</sub> = ${fmt(f.dc*1000,1)} mm</li>
    <li>Tiempo para el 100 % (T<sub>v</sub> = 1, Tabla 3)<span class="ec">t = T<sub>v</sub>·H<sub>D</sub>²/C<sub>v</sub> = 1·${fmt(f.Hd,2)}²/${cvTxt(A.cvm,A.cvn)} = ${fmt(f.t100*DIS.ANIO/1e6,1)}×10⁶ s = ${fmt(f.t100,2)} años ${f.t100<=S.t?`≤ ${fmt(S.t,0)} → U = 100 %`:`> ${fmt(S.t,0)} → U(${fmt(S.t,0)} años) = ${fmt(f.U,1)} %`}</span></li>
    <li>Consolidación secundaria de la subcapa 1 (pág. 45), C<sub>α</sub> = ${fmt(f.Ca,4)}${S.Ca==null?" (0,032·C<sub>c</sub>)":""}<span class="ec">${!S.incluirSec?"no se suma (desactivada)":(f.t100>=S.t?`t₁₀₀ = ${fmt(f.t100,2)} años ≥ ${fmt(S.t,0)}: la secundaria todavía no empieza → δ<sub>s</sub> = 0`:`e₁₀₀ = e₀ − Δe = ${fmt(S.e0,2)} − ${fmt(c.de,4)} = ${fmt(c.e100,4)}<br>δ<sub>s</sub> = Δz·C<sub>α</sub>/(1 + e₁₀₀)·log(t/t₁₀₀) = ${fmt(c.H,2)}·${fmt(f.Ca,4)}/(1 + ${fmt(c.e100,4)})·log(${fmt(S.t,0)}/${fmt(f.t100,2)}) = <b>${fmt(c.dsec*1000,2)} mm</b>`)}</span></li>
-   <li>Elástico (arcilla saturada, pág. 41)<span class="ec">${S.incluirDi?`δ<sub>e</sub> = c₁·c₂·q·B/E = ${fmt(f.c1,3)}·${fmt(f.c2,3)}·${fmt(f.qs,2)}·${fmt(B)}/${fmt(S.Es,0)} = ${fmt(cm(f.de),2)} cm`:"no se suma (desactivado)"}</span></li>
+   <li>Elástico (inmediato)<span class="ec">${S.incluirDi?`${S.elastico==="Iw"?`δ<sub>e</sub> = q·B·(1 − μ²)·I<sub>w</sub>/E = ${fmt(f.qs,2)}·${fmt(B)}·(1 − ${fmt(S.mu,2)}²)·${fmt(S.Iw,2)}/${fmt(S.Es,0)} = ${fmt(cm(f.de),2)} cm`:`δ<sub>e</sub> = c₁·c₂·q·B/E = ${fmt(f.c1,3)}·${fmt(f.c2,3)}·${fmt(f.qs,2)}·${fmt(B)}/${fmt(S.Es,0)} = ${fmt(cm(f.de),2)} cm`}`:"no se suma (desactivado)"}</span></li>
    <li>Asentamiento total a ${fmt(S.t,0)} años<span class="ec">δ<sub>t</sub> = δ<sub>e</sub> + U·Σδ<sub>p</sub> + Σδ<sub>s</sub> = ${fmt(cm(f.de),2)} + ${fmt(f.U/100,3)}·${fmt(cm(f.dc),2)} + ${fmt(cm(f.dsec),2)} = <b>${fmt(cm(f.dt),2)} cm</b> ${f.dt<=S.dadm?"≤":">"} ${fmt(cm(S.dadm),0)} cm ${f.dt<=S.dadm?"✓":"✗"}</span></li></ol>`:"";
   /* búsqueda D_f – B */
   const ml=r.malla,rec=ml.rec;
@@ -4801,6 +4806,13 @@ function dibujarFS(r){
    <p class="note">FS crece con B porque q<sub>cont</sub> = P/B² baja mucho más rápido de lo que baja q<sub>u</sub>. El B del Paso I es el que da FS = ${fmt(S.FS,1)} exacto. El salto de q<sub>u</sub> donde D<sub>f</sub>/B = 1 es de la fórmula: ahí F<sub>cd</sub> pasa de 1 + 0,4·D<sub>f</sub>/B a 1 + 0,4·tan⁻¹(D<sub>f</sub>/B).</p>`;
 }
 
+/* interpolación en la Tabla 3 (pág. 44), como a mano */
+function tabla3txt(Tv,U){
+  if(Tv>=1)return "<br>T<sub>v</sub> ≥ 1 → U = 100 % (la primaria ya terminó)";
+  const T=[0,0.02,0.04,0.075,0.12,0.196,0.275,0.4,0.59,0.848,1],UU=[0,10,20,30,40,50,60,70,80,90,100];
+  let i=0;while(i<T.length-2&&Tv>T[i+1])i++;
+  return `<br>Tabla 3: T<sub>v</sub> = ${fmt(T[i],3)} → ${UU[i]} % · T<sub>v</sub> = ${fmt(T[i+1],3)} → ${UU[i+1]} %<br>U = ${UU[i]} + (${fmt(Tv,3)} − ${fmt(T[i],3)})·10/(${fmt(T[i+1],3)} − ${fmt(T[i],3)}) = ${fmt(U,1)} %`;
+}
 /* ---------------- pasos (formato del tablero) ---------------- */
 const P=(t,ec)=>({t,h:ec?`<span class="ec">${ec}</span>`:""});
 function pasos(r){
@@ -4819,10 +4831,11 @@ function pasos(r){
   const f=r.ver;
   out.push(P(`Paso II · Dimensionamiento final chequeando el estado límite de servicio`,`δ<sub>t</sub> ≤ ${fmt(cm(S.dadm),0)} cm a ${fmt(S.t,0)} años (NSR-10, H.4.9)<br>δ<sub>t</sub> = δ<sub>e</sub> (elástico) + δ<sub>p</sub> (primaria) + δ<sub>s</sub> (secundaria)`));
   out.push(P(`Presión con B = ${fmt(f.B)} m`,`q<sub>cont</sub> = ${fmt(S.P,0)}/(${fmt(f.B)}·${fmt(f.L)}) = ${fmt(f.qcont,2)} kPa${S.presion==="neta"&&S.Df>0?`<br>q neta = q<sub>cont</sub> − γ·D<sub>f</sub> = ${fmt(f.qcont,2)} − ${fmt(f.sv,2)} = ${fmt(f.qs,2)} kPa`:""}`));
-  if(S.incluirDi)out.push(P("Asentamiento elástico δe (arcilla saturada, pág. 41)",`H/B = ${S.H!=null?`${fmt(f.Hc)}/${fmt(f.B)} = ${fmt(f.Hc/f.B,2)}`:"∞ → fila 30"} → c₁ = ${fmt(f.c1,3)} · D<sub>f</sub>/B = ${fmt(S.Df/f.B,3)} → c₂ = ${fmt(f.c2,3)}<br>δ<sub>e</sub> = c₁·c₂·q·B/E = ${fmt(f.c1,3)}·${fmt(f.c2,3)}·${fmt(f.qs,2)}·${fmt(f.B)}/${fmt(S.Es,0)} = <b>${fmt(cm(f.di),2)} cm</b>`));
+  if(S.incluirDi&&S.elastico==="Iw")out.push(P("Asentamiento elástico δe (inmediato)",`q = P/B² = ${fmt(f.qs,2)} kPa · μ = ${fmt(S.mu,2)} · I<sub>w</sub> = ${fmt(S.Iw,2)}<br>δ<sub>e</sub> = q·B·(1 − μ²)·I<sub>w</sub>/E = ${fmt(f.qs,2)}·${fmt(f.B)}·(1 − ${fmt(S.mu,2)}²)·${fmt(S.Iw,2)}/${fmt(S.Es,0)} = <b>${fmt(cm(f.de),2)} cm</b>`));
+  else if(S.incluirDi)out.push(P("Asentamiento elástico δe (arcilla saturada, pág. 41)",`H/B = ${S.H!=null?`${fmt(f.Hc)}/${fmt(f.B)} = ${fmt(f.Hc/f.B,2)}`:"∞ → fila 30"} → c₁ = ${fmt(f.c1,3)} · D<sub>f</sub>/B = ${fmt(S.Df/f.B,3)} → c₂ = ${fmt(f.c2,3)}<br>δ<sub>e</sub> = c₁·c₂·q·B/E = ${fmt(f.c1,3)}·${fmt(f.c2,3)}·${fmt(f.qs,2)}·${fmt(f.B)}/${fmt(S.Es,0)} = <b>${fmt(cm(f.di),2)} cm</b>`));
   out.push(P("Consolidación primaria (pág. 44)",`zona: de z = ${fmt(S.Df)} a ${fmt(f.zf)} m (${S.H!=null?"capa rígida":(S.zinf==="2B"?"H = 2B = "+fmt(f.Hc)+" m bajo la base":"hasta Δσ ≤ 10 % σ′₀")}) en ${f.filas.length} subcapas (ver «cálculo tipo»)<br>δ<sub>c</sub> = Σ H·C<sub>c</sub>·log(σ′f/σ′₀)/(1 + e₀) = <b>${fmt(cm(f.dc),2)} cm</b> (tabla)`));
   out.push(P("Tiempo para el 100 % de la consolidación",`t = T<sub>v</sub>·H<sub>D</sub>²/C<sub>v</sub> = 1·${fmt(f.Hd,2)}²/${S.Cv.toExponential(1).replace(".",",")} = ${fmt(f.t100,2)} años ${f.t100<=S.t?"≤":">"} ${fmt(S.t,0)} años`));
-  out.push(P(`Grado de consolidación a ${fmt(S.t,0)} años (Tabla 3)`,`H<sub>D</sub> = ${fmt(f.Hc)}/${fmt(S.dren,0)} = ${fmt(f.Hd,2)} m · C<sub>v</sub> = ${cvTxt(A.cvm,A.cvn)} m²/s<br>T<sub>v</sub> = C<sub>v</sub>·t/H<sub>D</sub>² = ${S.Cv.toExponential(2).replace(".",",")}·${fmt(S.t*DIS.ANIO/1e6,2)}×10⁶/${fmt(f.Hd,2)}² = ${fmt(f.Tv,3)} → U = <b>${fmt(f.U,1)} %</b>`));
+  out.push(P(`Grado de consolidación a ${fmt(S.t,0)} años (Tabla 3)`,`H<sub>D</sub> = ${fmt(f.Hc)}/${fmt(S.dren,0)} = ${fmt(f.Hd,2)} m · C<sub>v</sub> = ${cvTxt(A.cvm,A.cvn)} m²/s<br>T<sub>v</sub> = C<sub>v</sub>·t/H<sub>D</sub>² = ${S.Cv.toExponential(2).replace(".",",")}·${fmt(S.t*DIS.ANIO/1e6,2)}×10⁶/${fmt(f.Hd,2)}² = ${fmt(f.Tv,3)} → U = <b>${fmt(f.U,1)} %</b>${tabla3txt(f.Tv,f.U)}`));
   if(S.incluirSec)out.push(P("Consolidación secundaria (pág. 45)",f.t100>=S.t?`t₁₀₀ = ${fmt(f.t100,2)} años ≥ t = ${fmt(S.t,0)} años → la secundaria aún no empieza: δ<sub>s</sub> = 0`:`δ<sub>s</sub> = Σ Δz·C<sub>α</sub>/(1 + e₁₀₀)·log(t/t₁₀₀) con C<sub>α</sub> = ${fmt(f.Ca,4)} y log(${fmt(S.t,0)}/${fmt(f.t100,2)}) = ${fmt(Math.log10(S.t/f.t100),4)} → <b>${fmt(cm(f.dsec),2)} cm</b>`));
   out.push(P("Asentamiento total",`δ<sub>t</sub> = δ<sub>e</sub> + δ<sub>p</sub> + δ<sub>s</sub> = ${fmt(cm(f.de),2)} + ${fmt(f.U/100,3)}·${fmt(cm(f.dc),2)} + ${fmt(cm(f.dsec),2)} = <b>${fmt(cm(f.dt),2)} cm</b> ${f.dt<=S.dadm?"≤":">"} ${fmt(cm(S.dadm),0)} cm ${f.dt<=S.dadm?"✓":"✗"}<br>FS real = q<sub>u</sub>/q<sub>cont</sub> = ${fmt(f.qu,1)}/${fmt(f.qcont,1)} = ${fmt(f.FSr,2)} ${f.FSr>=S.FS-1e-9?"≥":"<"} ${fmt(S.FS,1)}`));
   if(r.prop){
@@ -4858,13 +4871,14 @@ function chequeos(r){
 }
 
 /* ---------------- controles ---------------- */
-const CAMPOS={Bp:2,P:0,LB:2,Df:2,paso:2,Su:1,gm:2,gsat:2,nf:2,Es:0,e0:3,Cc:3,Cs:3,OCR:2,t:0,cvm:1,cvn:0,H:2,dz:2,FS:2,Ca:4,Bchk:2};
-const SEGS=[["dModo","modo"],["dForma","forma"],["dFcs","fcs"],["dAdm","adm"],["dDren","dren"],["dZinf","zinf"],["dPres","pres"],["dDs","ds"]];
+const CAMPOS={mu:2,Iw:2,Bp:2,P:0,LB:2,Df:2,paso:2,Su:1,gm:2,gsat:2,nf:2,Es:0,e0:3,Cc:3,Cs:3,OCR:2,t:0,cvm:1,cvn:0,H:2,dz:2,FS:2,Ca:4,Bchk:2};
+const SEGS=[["dElas","elas"],["dModo","modo"],["dForma","forma"],["dFcs","fcs"],["dAdm","adm"],["dDren","dren"],["dZinf","zinf"],["dPres","pres"],["dDs","ds"]];
 function sync(){
   for(const k in CAMPOS){const n=$("dn_"+k),rg=$("dr_"+k);if(n&&document.activeElement!==n)n.value=fmt(A[k],CAMPOS[k]);if(rg)rg.value=A[k];}
   SEGS.forEach(([id,k])=>document.querySelectorAll(`#${id} button`).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(A[k])))));
   $("dHayNF").checked=A.hayNF;$("dRoca").checked=A.roca;$("dDi").checked=A.di;$("dSec").checked=A.sec;$("dCaAuto").checked=A.caAuto;$("dSecBlk").hidden=!A.sec;$("df_Ca").hidden=A.caAuto;
   if(A.caAuto)A.Ca=0.032*A.Cc;
+  $("df_mu").hidden=A.elas!=="Iw";$("df_Iw").hidden=A.elas!=="Iw";
   $("df_LB").hidden=A.forma!=="rect";$("df_Bp").hidden=A.modo!=="prop";$("dTanteoBtns").hidden=A.modo!=="prop";$("df_Bchk").hidden=A.modo==="prop";
   if(A.modo==="prop")A.Bchk=A.Bp;$("df_nf").hidden=!A.hayNF;$("df_gsat").hidden=!A.hayNF;$("df_H").hidden=!A.roca;$("dZinfBlk").hidden=A.roca;
 }
@@ -4907,7 +4921,14 @@ $("dEjClase").addEventListener("click",()=>{A=Object.assign({},CLASE,{tanteos:[]
 $("dGuardar").addEventListener("click",()=>{const r=ultimo;if(!r||!r.prop)return;const f=r.ver,S=r.S;
   A.tanteos.push({n:A.tanteos.length+1,Df:S.Df,B:f.B,qcont:f.qcont,FSr:f.FSr,FS:S.FS,de:f.de,U:f.U,dp:f.dp,dsec:f.dsec,dt:f.dt,dfin:f.de+f.dc+f.dsec,dadm:S.dadm,t:S.t});cambio();});
 $("dBorrar").addEventListener("click",()=>{A.tanteos=[];cambio();});
-$("dEjTarea").addEventListener("click",()=>{A=Object.assign({},CLASE,{Df:2,Bp:2.35,tanteos:[]});cambio();});
+$("dEjTarea").addEventListener("click",()=>{A=Object.assign({},CLASE,{Df:1.5,Bp:2.45,tanteos:[]});cambio();});
+document.querySelectorAll("#mainDis [data-df]").forEach(b=>b.addEventListener("click",()=>{const Df=+b.dataset.df;
+  A=Object.assign({},CLASE,{Df,tanteos:[]});A.Bp=DIS.paso1(DIS.norm(datos())).B;cambio();}));
+/* tanteos como en el PDF: B del Paso I, 3, 3,5, 4, 4,5 m, el último que no cumple y el primero que cumple */
+$("dLlenar").addEventListener("click",()=>{const S=DIS.norm(datos()),p1=DIS.paso1(S),r=DIS.disenar(S);if(r.Bfinal==null)return;
+  const fin=r.Bfinal,lista=[...new Set([p1.B,3,3.5,4,4.5,Math.round((fin-S.paso)*100)/100,fin].map(x=>Math.round(x*100)/100))].filter(x=>x>=p1.B-1e-9&&x<=fin+1e-9).sort((a,b)=>a-b);
+  A.tanteos=lista.map((B,k)=>{const f=DIS.asentamiento(B,S);return {n:k+1,Df:S.Df,B,qcont:f.qcont,FSr:f.FSr,FS:S.FS,de:f.de,U:f.U,dp:f.dp,dsec:f.dsec,dt:f.dt,dfin:f.de+f.dc+f.dsec,dadm:S.dadm,t:S.t};});
+  A.Bp=fin;cambio();});
 $("segModulo").addEventListener("click",()=>setTimeout(render,0));
 render();
 
