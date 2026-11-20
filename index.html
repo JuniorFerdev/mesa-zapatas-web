@@ -22,7 +22,7 @@ addEventListener("DOMContentLoaded",()=>{const ios=/iphone|ipad|ipod/i.test(navi
 if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}));
 /* actualización automática: la app instalada (Mac/iPhone/Android) compara su versión con la publicada.
    Al abrirla, si hay una nueva, se recarga sola una vez (los datos quedan guardados); si llega mientras está abierta, avisa. */
-window.APP_VER="202611200324";
+window.APP_VER="202611200328";
 (function(){if(!/^https?:$/.test(location.protocol))return;
   const ver=()=>fetch("version.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>j&&j.v).catch(()=>null);
   const recargar=()=>{const f=()=>location.reload();if(navigator.serviceWorker)navigator.serviceWorker.getRegistration().then(g=>g&&g.update()).then(f,f);else f();};
@@ -824,6 +824,7 @@ ol.pasos li.entra{animation:entraPaso .35s ease both}
     <div id="dTablaC" class="ttab"></div>
     <div id="dTipo" class="tipoCalc"></div>
   </section>
+  <section class="card"><h2>Paso III — Base óptima para este Df (la más económica)</h2><div class="body"><div id="dOpt" class="ttab"></div></div></section>
   <section class="card"><h2>Factor de seguridad — q contacto contra B</h2><div class="body">
     <svg class="dib" id="dSvgFS" viewBox="0 0 900 330" role="img" aria-label="q contacto y q admisible contra B"></svg>
 <div class="fld" id="df_Bchk"><div class="lab"><span>B a revisar (con el D<sub>f</sub> de los datos)</span><b><input type="text" inputmode="decimal" autocomplete="off" class="numIn" id="dn_Bchk"> m</b></div><input type="range" id="dr_Bchk" min="0.5" max="8" step="0.05"></div>
@@ -2135,7 +2136,29 @@ const DIS=(function(){
   function disenar(S0){
     const S=norm(S0),p1=paso1(S),filas=[];let B=p1.B,Bf=null,k=0;
     while(B<=S.Bmax+1e-9&&k<400){const r=asentamiento(B,S);filas.push(r);if(r.cumple){Bf=B;break;}B=Math.round((B+S.paso)*1e6)/1e6;k++;}
-    return {S,paso1:p1,filas,Bfinal:Bf,final:Bf!=null?filas[filas.length-1]:null,inicial:filas[0]||null,porDf:porDf(S),malla:malla(S)};
+    return {S,paso1:p1,filas,Bfinal:Bf,final:Bf!=null?filas[filas.length-1]:null,inicial:filas[0]||null,porDf:porDf(S),malla:malla(S),optimo:bOptimo(S)};
+  }
+  /* base óptima (la más económica) para el D_f dado — mismo algoritmo que b_optimo en Python */
+  function bOptimo(S){
+    const p1=paso1(S),BA=p1.B,rA=asentamiento(BA,S),it=[{B:BA,dt:rA.dt,tipo:"A (Paso I)"}];
+    if(rA.cumple)return {gobierna:"falla",B:BA,Bstar:BA,iter:it,dtB:rA.dt,prev:null,dtprev:null};
+    let BB=2*BA,rB=asentamiento(BB,S);
+    while(!rB.cumple&&BB<S.Bmax){BB=Math.min(1.5*BB,S.Bmax);rB=asentamiento(BB,S);}
+    it.push({B:BB,dt:rB.dt,tipo:"B (cumple)"});
+    if(!rB.cumple)return {gobierna:"ninguno",B:null,Bstar:null,iter:it,dtB:null,prev:null,dtprev:null};
+    let lo=BA,hi=BB,B1=BA,d1=rA.dt,B2=BB,d2=rB.dt,Bs=BB;
+    for(let k=0;k<20;k++){
+      let Bi=d2!==d1?B1+(S.dadm-d1)*(B2-B1)/(d2-d1):(lo+hi)/2;
+      if(!(lo<Bi&&Bi<hi))Bi=(lo+hi)/2;
+      const di=asentamiento(Bi,S).dt;it.push({B:Bi,dt:di,tipo:`interpolación ${k+1}`});Bs=Bi;
+      if(Math.abs(di-S.dadm)<2e-4||hi-lo<1e-3)break;
+      if(di>S.dadm)lo=Bi;else hi=Bi;
+      B1=B2;d1=d2;B2=Bi;d2=di;}
+    const p=S.paso,r6=x=>Math.round(x*1e6)/1e6;let Br=r6(Math.max(Math.ceil(Bs/p-1e-9)*p,BA));
+    while(!asentamiento(Br,S).cumple&&Br<S.Bmax)Br=r6(Br+p);
+    while(Br-p>=BA-1e-9&&asentamiento(r6(Br-p),S).cumple)Br=r6(Br-p);
+    const prev=r6(Br-p);
+    return {gobierna:"servicio",B:Br,Bstar:Bs,iter:it,dtB:asentamiento(Br,S).dt,prev,dtprev:asentamiento(prev,S).dt};
   }
   function bMinimo(S){
     const p1=paso1(S);let B=p1.B,k=0;
@@ -2163,7 +2186,7 @@ const DIS=(function(){
       if(r.cumple){Dff=Df;break;}Df=Math.round((Df+S.pasoDf)*1e6)/1e6;k++;}
     return {filas,Dffinal:Dff};
   }
-  return {NC,NQ,ANIO,norm,factores,capacidad,paso1,profundidadInfluencia,subcapas,asentamiento,disenar,porDf,bMinimo,malla};
+  return {NC,NQ,ANIO,norm,factores,capacidad,paso1,profundidadInfluencia,subcapas,asentamiento,disenar,porDf,bMinimo,malla,bOptimo};
 })();
 if(typeof module!=="undefined")module.exports=DIS;
 
@@ -4726,6 +4749,8 @@ function dibujar(r){
   g.appendChild(el("path",{d:r.curva.map((p,i)=>(i?"L":"M")+PX(p[0]).toFixed(1)+","+PY(cm(p[1])).toFixed(1)).join(" "),fill:"none",stroke:V("--agua2"),"stroke-width":2.5}));
   const xp=PX(Bp);g.appendChild(el("line",{x1:xp,y1:gy0,x2:xp,y2:gy1,stroke:V("--tinta3"),"stroke-dasharray":"3 3"}));
   txt(g,xp+4,gy1+14,"falla",{fs:10.5});
+  if(r.optimo&&r.optimo.Bstar&&r.optimo.Bstar>=bmin&&r.optimo.Bstar<=bmax){const xs=PX(r.optimo.Bstar);
+    g.appendChild(el("line",{x1:xs,y1:gy0,x2:xs,y2:gy1,stroke:V("--ok"),"stroke-dasharray":"5 4"}));txt(g,xs+4,gy0-8,`B* = ${fmt(r.optimo.Bstar,2)} → óptimo ${fmt(r.optimo.B)} m`,{fs:11,fill:V("--ok"),fw:600});}
   const fin=r.prop?r.ver:r.final;
   if(fin&&fin.B>=bmin&&fin.B<=bmax){const xf=PX(fin.B),yf=PY(cm(fin.dt));g.appendChild(el("circle",{cx:xf,cy:yf,r:6,fill:V(fin.dt<=S.dadm?"--ok":"--falla")}));
     txt(g,xf+9,yf+18,`${r.prop?"tu B":"B"} = ${fmt(fin.B)} m → δt = ${fmt(cm(fin.dt),1)} cm`,{fs:12,fill:V("--tinta"),fw:600});}
@@ -4806,6 +4831,24 @@ function dibujarFS(r){
    <p class="note">FS crece con B porque q<sub>cont</sub> = P/B² baja mucho más rápido de lo que baja q<sub>u</sub>. El B del Paso I es el que da FS = ${fmt(S.FS,1)} exacto. El salto de q<sub>u</sub> donde D<sub>f</sub>/B = 1 es de la fórmula: ahí F<sub>cd</sub> pasa de 1 + 0,4·D<sub>f</sub>/B a 1 + 0,4·tan⁻¹(D<sub>f</sub>/B).</p>`;
 }
 
+/* Paso III: base óptima (la más económica) con interpolación entre dos tanteos */
+function optimoHTML(r){
+  const o=r.optimo,S=r.S,adm=cm(S.dadm);
+  if(o.gobierna==="ninguno")return `<p class="veredicto" style="border-color:var(--falla)">Ni con B = ${fmt(S.Bmax,0)} m se cumple δ<sub>t</sub> ≤ ${fmt(adm,0)} cm: una zapata aislada no sirve (losa, precarga o pilotes).</p>`;
+  if(o.gobierna==="falla")return `<p class="veredicto">Con el B del Paso I (${fmt(o.B)} m) ya se cumple δ<sub>t</sub> = ${fmt(cm(o.dtB),2)} cm ≤ ${fmt(adm,0)} cm: <b>gobierna la falla y B óptimo = ${fmt(o.B)} m</b>.</p>`;
+  const it=o.iter,A=it[0],Bb=it[1],i1=it[2];
+  return `<p class="veredicto" style="margin:0 0 8px;border-color:var(--agua2)"><b>Idea:</b> la zapata más barata es la <b>más pequeña que cumple las dos condiciones</b>. δ<sub>t</sub> baja cuando B crece, así que existe un único B* donde δ<sub>t</sub> = ${fmt(adm,0)} cm exacto. No se adivina: se encierra entre un B que no cumple y uno que sí, y se interpola.</p>
+  <ol class="pasosOpt">
+   <li><b>B<sub>A</sub> = B del Paso I = ${fmt(A.B)} m</b> → δ<sub>t</sub> = ${fmt(cm(A.dt),2)} cm (no cumple: se queda corto)</li>
+   <li><b>B<sub>B</sub> = 2·B<sub>A</sub> = ${fmt(Bb.B)} m</b> → δ<sub>t</sub> = ${fmt(cm(Bb.dt),2)} cm (cumple: se pasa) → B* está entre ${fmt(A.B)} y ${fmt(Bb.B)} m</li>
+   <li><b>Interpolación lineal</b> para que δ<sub>t</sub> = ${fmt(adm,0)} cm:<br><span class="ec">B = B<sub>A</sub> + (δ<sub>A</sub> − ${fmt(adm,0)})·(B<sub>B</sub> − B<sub>A</sub>)/(δ<sub>A</sub> − δ<sub>B</sub>) = ${fmt(A.B)} + (${fmt(cm(A.dt),2)} − ${fmt(adm,0)})·(${fmt(Bb.B)} − ${fmt(A.B)})/(${fmt(cm(A.dt),2)} − ${fmt(cm(Bb.dt),2)}) = <b>${fmt(i1.B,3)} m</b> → δ<sub>t</sub> = ${fmt(cm(i1.dt),2)} cm</span></li>
+   <li>La curva no es recta, así que se repite con los dos últimos puntos hasta que δ<sub>t</sub> ≈ ${fmt(adm,0)} cm:
+     <table><tr><th>tanteo</th><th>B (m)</th><th>δ<sub>t</sub> (cm)</th></tr>${it.map(x=>`<tr><td>${x.tipo}</td><td>${fmt(x.B,3)}</td><td>${fmt(cm(x.dt),3)}</td></tr>`).join("")}</table>
+     → <b>B* = ${fmt(o.Bstar,3)} m</b></li>
+   <li><b>Redondeo hacia arriba</b> al módulo constructivo (${fmt(S.paso)} m) y verificación:<br><span class="ec">B = ${fmt(o.prev)} m → δ<sub>t</sub> = ${fmt(cm(o.dtprev),3)} cm ✗ &nbsp;·&nbsp; <b>B = ${fmt(o.B)} m → δ<sub>t</sub> = ${fmt(cm(o.dtB),2)} cm ✓</b></span></li></ol>
+  <p class="veredicto"><b>Base óptima para D<sub>f</sub> = ${fmt(S.Df)} m: B = L = ${fmt(o.B)} m.</b> Es la más pequeña que cumple (la más barata): una más pequeña ya no cumple el asentamiento, y una más grande gasta concreto sin necesidad.${r.prop?` Tu propuesta B = ${fmt(A_Bp())} m ${A_Bp()<o.B-1e-9?"<b>no alcanza</b>":(Math.abs(A_Bp()-o.B)<1e-9?"<b>es la óptima</b>":`cumple pero sobra ${fmt((A_Bp()**2/o.B**2-1)*100,0)} % de área`)}.`:""}</p>`;
+}
+const A_Bp=()=>A.Bp;
 /* interpolación en la Tabla 3 (pág. 44), como a mano */
 function tabla3txt(Tv,U){
   if(Tv>=1)return "<br>T<sub>v</sub> ≥ 1 → U = 100 % (la primaria ya terminó)";
@@ -4843,6 +4886,8 @@ function pasos(r){
     out.push(P("Veredicto de tu propuesta",`B = ${fmt(f.B)} × ${fmt(f.L)} m · D<sub>f</sub> = ${fmt(S.Df)} m<br>falla: FS = ${fmt(f.FSr,2)} ${r.cumpleFS?"≥":"<"} ${fmt(S.FS,1)} ${r.cumpleFS?"✓":"✗"} · servicio: δ<sub>t</sub> = ${fmt(cm(f.dt),2)} ${r.cumpleD?"≤":">"} ${fmt(cm(S.dadm),0)} cm ${r.cumpleD?"✓":"✗"}<br>`+
       (ok?(fin<=S.dadm+1e-12?`<b>CUMPLE.</b> Para optimizar, prueba un B un poco menor y mira si sigue cumpliendo.`:`<b>Cumple a los ${fmt(S.t,0)} años, pero la primaria no ha terminado (U = ${fmt(f.U,1)} %): al final llegará a ${fmt(cm(fin),2)} cm.</b> Mejor sube B o D<sub>f</sub>.`):
       (!r.cumpleFS?`<b>NO CUMPLE por falla:</b> tu B es menor que el del Paso I (${fmt(r.paso1.B)} m). Sube B.`:`<b>NO CUMPLE por asentamiento:</b> sube B (baja q = P/B²) o profundiza D<sub>f</sub> (sube σ′₀) y vuelve a verificar.`))));
+    const o=r.optimo;
+    if(o.B!=null)out.push(P("Paso III · Base óptima (la más económica) para este D<sub>f</sub>",`se encierra B* entre ${fmt(o.iter[0].B)} m (✗) y ${fmt(o.iter[1].B)} m (✓) y se interpola → B* = ${fmt(o.Bstar,3)} m → redondeado: <b>B = ${fmt(o.B)} m</b> (δ<sub>t</sub> = ${fmt(cm(o.dtB),2)} cm; con ${fmt(o.prev)} m da ${fmt(cm(o.dtprev),3)} cm ✗). Detalle en la tarjeta «Paso III».`));
     return out;
   }
   if(r.filas.length>1)out.push(P("Iteración sobre B",r.filas.length<=8?r.filas.map(x=>`B = ${fmt(x.B)} → δ<sub>t</sub> = ${fmt(cm(x.dt),2)} cm ${x.cumple?"✓":"✗"}`).join("<br>"):
@@ -4895,10 +4940,10 @@ function render(){
     $("dBig").innerHTML=`δ<sub style="font-size:.5em">t</sub> = ${fmt(cm(r.ver.dt),2)} <span class="u">cm ${ok?"✓":"✗"}</span>`;
     $("dBig").style.color=`var(--${ok?"ok":"falla"})`;
   }else{$("dBig").innerHTML=`B = <span id="dRes">${r.Bfinal!=null?fmt(r.Bfinal):"> 15"}</span> <span class="u">m</span>`;$("dBig").style.color="";}
-  $("dResChip").innerHTML=(r.prop?`<b>tu propuesta: B = ${fmt(A.Bp)} m · D<sub>f</sub> = ${fmt(r.S.Df)} m → ${r.cumpleFS&&r.cumpleD?"CUMPLE":"NO CUMPLE"}</b><br>falla: FS = ${fmt(r.ver.FSr,2)} ${r.cumpleFS?"✓":"✗"} (B mínimo por falla ${fmt(r.paso1.B)} m)<br>`:
+  $("dResChip").innerHTML=(r.prop?`<b>tu propuesta: B = ${fmt(A.Bp)} m · D<sub>f</sub> = ${fmt(r.S.Df)} m → ${r.cumpleFS&&r.cumpleD?"CUMPLE":"NO CUMPLE"}</b><br>falla: FS = ${fmt(r.ver.FSr,2)} ${r.cumpleFS?"✓":"✗"} (B mínimo por falla ${fmt(r.paso1.B)} m)<br><b>B óptimo para D<sub>f</sub> = ${fmt(r.S.Df)} m: ${r.optimo.B!=null?fmt(r.optimo.B)+" m":"—"}</b><br>`:
     `con D<sub>f</sub> = ${fmt(r.S.Df)} m · falla (Paso I): ${fmt(r.paso1.B)} m · servicio: ${r.Bfinal!=null?fmt(r.Bfinal)+" m":"no cumple"}<br>`)+`<span class="tipoAs to">TOTAL δt = elástico + primaria + secundaria</span><br>δ<sub>e</sub> ${fmt(cm(r.ver.de),2)} + δ<sub>p</sub> ${fmt(cm(r.ver.dp),2)} + δ<sub>s</sub> ${fmt(cm(r.ver.dsec),2)} = <b>δ<sub>t</sub> ${fmt(cm(r.ver.dt),2)} cm</b> · FS real ${fmt(r.ver.FSr,2)}${r.prop?"":`<br><b>${rc?`recomendado: D<sub>f</sub> = ${fmt(rc.Df)} m · B = ${fmt(rc.B)} m`:"sin par superficial que cumpla"}</b>`}`;
   if(!(A.FS>=1))A.FS=3;
-  dibujar(r);tablas(r);dibujarFS(r);
+  dibujar(r);tablas(r);dibujarFS(r);$("dOpt").innerHTML=optimoHTML(r);
   $("dPasos").innerHTML=pasos(r).map(p=>`<li><span class="t">${p.t}</span>${p.h}</li>`).join("");
   $("dChk").innerHTML=chequeos(r);
   $("dts_carga").textContent=`${fmt(A.P,0)} kN · Df ${fmt(A.Df,1)}`;$("dts_suelo").textContent=`Su ${fmt(A.Su,0)} · Cc ${fmt(A.Cc,2)}`;
